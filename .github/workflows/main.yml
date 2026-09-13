@@ -59,6 +59,7 @@ jobs:
             unzip \
             zip \
             curl \
+            patch \
             autoconf \
             automake \
             libtool \
@@ -77,9 +78,9 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: ${{ runner.os }}-buildozer-arm64-v8-${{ hashFiles('buildozer.spec') }}
+          key: ${{ runner.os }}-buildozer-arm64-v9-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-arm64-v8-
+            ${{ runner.os }}-buildozer-arm64-v9-
 
       - name: 7. Create Isolated Python 3.10 Venv & Install Buildozer
         run: |
@@ -90,7 +91,7 @@ jobs:
           pip install "legacy-cgi" "buildozer>=1.5.0" "cython==0.29.33" "setuptools==68.2.2" virtualenv Pillow -q
           buildozer version
 
-          # Create global pip constraint to pin Cython < 3 everywhere (preventing p4a internal venv issues)
+          # Global pip constraints for Cython < 3
           echo "Cython==0.29.33" > "$GITHUB_WORKSPACE/pip_constraints.txt"
           echo "setuptools==68.2.2" >> "$GITHUB_WORKSPACE/pip_constraints.txt"
 
@@ -170,7 +171,7 @@ jobs:
             exit 1
           fi
 
-      - name: 9. Pre-Configure Android SDK/NDK & Execute Buildozer Compilation
+      - name: 9. Pre-Configure Complete Android SDK/NDK & Execute Buildozer Compilation
         env:
           APP_ANDROID_ACCEPT_SDK_LICENSES: "1"
           ACCEPT_SDK_LICENSE: "1"
@@ -191,7 +192,7 @@ jobs:
           echo "JAVA_HOME: $JAVA_HOME"
           java -version
 
-          # 1. Clear inappropriate runner NDK environment variables (NDK 27/29)
+          # 1. Clear runner NDK environment variables pointing to NDK 27/29
           unset ANDROID_NDK
           unset ANDROID_NDK_HOME
           unset ANDROID_NDK_LATEST_HOME
@@ -205,33 +206,32 @@ jobs:
           echo "Ensuring platform-tools, android-33, and build-tools 33.0.2 are ready..."
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
 
-          # 4. Setup Buildozer SDK directory
+          # 4. Setup Complete Buildozer SDK Directory
           BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
           mkdir -p "$BUILDOZER_SDK"
-          mkdir -p "$BUILDOZER_SDK/licenses"
-          mkdir -p "$BUILDOZER_SDK/build-tools"
+
+          # Symlink cmdline-tools AND tools so avdmanager and sdkmanager exist in ALL lookup paths
+          ln -sfn /usr/local/lib/android/sdk/cmdline-tools "$BUILDOZER_SDK/cmdline-tools"
+          ln -sfn /usr/local/lib/android/sdk/cmdline-tools/latest "$BUILDOZER_SDK/tools"
+          ln -sfn /usr/local/lib/android/sdk/platform-tools "$BUILDOZER_SDK/platform-tools"
+
+          # Copy platforms
           mkdir -p "$BUILDOZER_SDK/platforms"
-          mkdir -p "$BUILDOZER_SDK/platform-tools"
-          mkdir -p "$BUILDOZER_SDK/tools/bin"
+          cp -rn /usr/local/lib/android/sdk/platforms/* "$BUILDOZER_SDK/platforms/" 2>/dev/null || true
+
+          # Copy build-tools (keeping stable 33.0.2 / 34.0.0, strictly removing preview 37)
+          mkdir -p "$BUILDOZER_SDK/build-tools"
+          cp -rn /usr/local/lib/android/sdk/build-tools/* "$BUILDOZER_SDK/build-tools/" 2>/dev/null || true
+          rm -rf "$BUILDOZER_SDK/build-tools/37*" 2>/dev/null || true
+          sudo rm -rf /usr/local/lib/android/sdk/build-tools/37* 2>/dev/null || true
 
           # Copy licenses
+          mkdir -p "$BUILDOZER_SDK/licenses"
           cp -rn /usr/local/lib/android/sdk/licenses/* "$BUILDOZER_SDK/licenses/" 2>/dev/null || true
           printf "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n" > "$BUILDOZER_SDK/licenses/android-sdk-license"
           printf "84831b9409646a918e30573bab4c9c91346d8abd\n" > "$BUILDOZER_SDK/licenses/android-sdk-preview-license"
 
-          # Copy build-tools (includes 33.0.2 with aidl!)
-          cp -rn /usr/local/lib/android/sdk/build-tools/* "$BUILDOZER_SDK/build-tools/" 2>/dev/null || true
-
-          # Copy platforms (includes android-33!)
-          cp -rn /usr/local/lib/android/sdk/platforms/* "$BUILDOZER_SDK/platforms/" 2>/dev/null || true
-
-          # Copy platform-tools
-          cp -rn /usr/local/lib/android/sdk/platform-tools/* "$BUILDOZER_SDK/platform-tools/" 2>/dev/null || true
-
-          # Link sdkmanager so Buildozer finds it at tools/bin/sdkmanager
-          ln -sf /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "$BUILDOZER_SDK/tools/bin/sdkmanager"
-
-          # 5. Setup Official Android NDK r25b (required for python-for-android)
+          # 5. Setup Official Android NDK r25b (required by python-for-android)
           NDK_DIR="$HOME/.buildozer/android/platform/android-ndk-r25b"
           if [ ! -d "$NDK_DIR" ]; then
             echo "Downloading official Android NDK r25b..."
@@ -242,7 +242,7 @@ jobs:
             rm -f /tmp/ndk25b.zip
           fi
 
-          # Strictly set all NDK environment variables to NDK r25b
+          # Strictly export NDK r25b environment variables
           export ANDROID_NDK_HOME="$NDK_DIR"
           export ANDROID_NDK="$NDK_DIR"
           export ANDROIDNDK="$NDK_DIR"
@@ -252,15 +252,29 @@ jobs:
           mkdir -p ~/.android
           touch ~/.android/repositories.cfg
 
-          echo "SDK setup verified:"
+          echo "=== SDK & Toolchain Verification ==="
           ls -la "$BUILDOZER_SDK"
-          echo "Available build-tools in Buildozer SDK:"
+          echo "Available build-tools (must NOT contain 37):"
           ls -la "$BUILDOZER_SDK/build-tools"
+          echo "Available platforms:"
+          ls -la "$BUILDOZER_SDK/platforms"
+          echo "Testing avdmanager:"
+          "$BUILDOZER_SDK/cmdline-tools/latest/bin/avdmanager" list target || true
           echo "NDK verified at: $NDK_DIR"
           head -n 3 "$NDK_DIR/source.properties" 2>/dev/null || true
 
           echo "Starting Buildozer compilation (Pure 64-bit arm64-v8a)..."
-          yes | buildozer -v android debug
+          yes | buildozer -v android debug || {
+            echo "==================== BUILD FAILED: PRINTING FULL P4A & BUILDOZER LOGS ===================="
+            if [ -f .buildozer/buildozer.log ]; then
+              tail -n 300 .buildozer/buildozer.log
+            fi
+            for logf in $(find .buildozer/ -name "*.log" 2>/dev/null); do
+              echo "--- LOG FILE: $logf ---"
+              tail -n 100 "$logf"
+            done
+            exit 1
+          }
 
       - name: 10. Verify & Check 64-Bit APK Output
         run: |
