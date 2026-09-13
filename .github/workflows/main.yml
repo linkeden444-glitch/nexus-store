@@ -132,7 +132,7 @@ jobs:
               cp -f "$ICON_FILE" ./icon.png
             else
               echo "Creating fallback icon.png..."
-              python3 -c "from PIL import Image; Image.new('RGB', (512, 512), color=(10, 15, 30)).save('icon.png')" 2>/dev/null || touch icon.png
+              python3 -c "from PIL import Image; Image.new('RGB', (512, 512), (10, 15, 30)).save('icon.png')" 2>/dev/null || touch icon.png
             fi
           fi
 
@@ -169,13 +169,16 @@ jobs:
           fi
           export PATH="$JAVA_HOME/bin:$PATH"
 
+          mkdir -p ~/.android 2>/dev/null || true
+          touch ~/.android/repositories.cfg
+
           echo "Using JAVA_HOME: $JAVA_HOME"
           java -version
           
           echo "Starting Buildozer Android 64-bit (arm64-v8a) APK compilation..."
-          echo "Build in progress..."
+          echo "Auto-accepting all licenses via pipe..."
           
-          buildozer -v android debug
+          yes | buildozer -v android debug
 
       - name: 10. Verify & Check 64-Bit APK Output
         run: |
