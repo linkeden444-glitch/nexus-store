@@ -58,6 +58,7 @@ jobs:
             git \
             unzip \
             zip \
+            curl \
             autoconf \
             automake \
             libtool \
@@ -76,9 +77,9 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: ${{ runner.os }}-buildozer-arm64-v7-${{ hashFiles('buildozer.spec') }}
+          key: ${{ runner.os }}-buildozer-arm64-v8-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-arm64-v7-
+            ${{ runner.os }}-buildozer-arm64-v8-
 
       - name: 7. Create Isolated Python 3.10 Venv & Install Buildozer
         run: |
@@ -88,6 +89,10 @@ jobs:
           pip install --upgrade pip -q
           pip install "legacy-cgi" "buildozer>=1.5.0" "cython==0.29.33" "setuptools==68.2.2" virtualenv Pillow -q
           buildozer version
+
+          # Create global pip constraint to pin Cython < 3 everywhere (preventing p4a internal venv issues)
+          echo "Cython==0.29.33" > "$GITHUB_WORKSPACE/pip_constraints.txt"
+          echo "setuptools==68.2.2" >> "$GITHUB_WORKSPACE/pip_constraints.txt"
 
       - name: 8. Prepare Workspace Files & Verify Config
         run: |
@@ -134,9 +139,16 @@ jobs:
             fi
           fi
 
-          # Enforce pure 64-bit ARM architecture
+          # Enforce pure 64-bit ARM architecture and correct metadata
           sed -i 's/android.archs = .*/android.archs = arm64-v8a/' buildozer.spec
           sed -i 's/title = .*/title = NEXUS UC Store/' buildozer.spec
+          sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
+          sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
+          sed -i 's/android.ndk = .*/android.ndk = 25b/' buildozer.spec
+          sed -i 's/android.ndk_api = .*/android.ndk_api = 24/' buildozer.spec
+
+          # Enforce robust requirements (pure python chardet + openssl for HTTPS)
+          sed -i 's/requirements = .*/requirements = python3,kivy==2.3.0,requests,urllib3,certifi,chardet,idna,openssl/' buildozer.spec
 
           # Enforce auto acceptance of SDK licenses
           if ! grep -q "android.accept_sdk_license" buildozer.spec; then
@@ -151,14 +163,14 @@ jobs:
           fi
 
           echo "Final buildozer.spec check:"
-          grep -E "android.archs|title|android.accept_sdk_license|android.skip_update" buildozer.spec
+          grep -E "android.archs|title|requirements|android.accept_sdk_license|android.skip_update" buildozer.spec
 
           if [ ! -f "main.py" ] || [ ! -f "buildozer.spec" ]; then
             echo "CRITICAL ERROR: Required build files missing!"
             exit 1
           fi
 
-      - name: 9. Pre-Configure Android SDK & Execute Buildozer Compilation
+      - name: 9. Pre-Configure Android SDK/NDK & Execute Buildozer Compilation
         env:
           APP_ANDROID_ACCEPT_SDK_LICENSES: "1"
           ACCEPT_SDK_LICENSE: "1"
@@ -166,6 +178,7 @@ jobs:
           GRADLE_OPTS: "-Xmx4096m -Dorg.gradle.jvmargs=-Xmx4096m"
         run: |
           export PATH="$GITHUB_WORKSPACE/venv/bin:$PATH"
+          export PIP_CONSTRAINT="$GITHUB_WORKSPACE/pip_constraints.txt"
 
           # Java setup
           if [ -n "$JAVA_HOME_17_X64" ] && [ -d "$JAVA_HOME_17_X64" ]; then
@@ -178,15 +191,21 @@ jobs:
           echo "JAVA_HOME: $JAVA_HOME"
           java -version
 
-          # Pre-accept all licenses using system sdkmanager
+          # 1. Clear inappropriate runner NDK environment variables (NDK 27/29)
+          unset ANDROID_NDK
+          unset ANDROID_NDK_HOME
+          unset ANDROID_NDK_LATEST_HOME
+          unset NDK_HOME
+
+          # 2. Pre-accept all licenses using system sdkmanager
           echo "Pre-accepting Android SDK licenses via system sdkmanager..."
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-          # Ensure platforms;android-33 and build-tools;33.0.2 are installed
+          # 3. Ensure platforms;android-33 and build-tools;33.0.2 are installed
           echo "Ensuring platform-tools, android-33, and build-tools 33.0.2 are ready..."
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
 
-          # Setup Buildozer SDK directory
+          # 4. Setup Buildozer SDK directory
           BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
           mkdir -p "$BUILDOZER_SDK"
           mkdir -p "$BUILDOZER_SDK/licenses"
@@ -212,15 +231,22 @@ jobs:
           # Link sdkmanager so Buildozer finds it at tools/bin/sdkmanager
           ln -sf /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "$BUILDOZER_SDK/tools/bin/sdkmanager"
 
-          # Link pre-installed Android NDK r25 if available on runner
-          for ndk_dir in /usr/local/lib/android/sdk/ndk/25*; do
-            if [ -d "$ndk_dir" ]; then
-              echo "Linking pre-installed Android NDK ($ndk_dir)..."
-              mkdir -p "$HOME/.buildozer/android/platform"
-              ln -sfn "$ndk_dir" "$HOME/.buildozer/android/platform/android-ndk-r25b"
-              break
-            fi
-          done
+          # 5. Setup Official Android NDK r25b (required for python-for-android)
+          NDK_DIR="$HOME/.buildozer/android/platform/android-ndk-r25b"
+          if [ ! -d "$NDK_DIR" ]; then
+            echo "Downloading official Android NDK r25b..."
+            mkdir -p "$HOME/.buildozer/android/platform"
+            curl -s -L -o /tmp/ndk25b.zip "https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
+            echo "Extracting Android NDK r25b..."
+            unzip -q /tmp/ndk25b.zip -d "$HOME/.buildozer/android/platform"
+            rm -f /tmp/ndk25b.zip
+          fi
+
+          # Strictly set all NDK environment variables to NDK r25b
+          export ANDROID_NDK_HOME="$NDK_DIR"
+          export ANDROID_NDK="$NDK_DIR"
+          export ANDROIDNDK="$NDK_DIR"
+          export NDK_HOME="$NDK_DIR"
 
           # Touch repositories.cfg to suppress SDK warnings
           mkdir -p ~/.android
@@ -230,6 +256,8 @@ jobs:
           ls -la "$BUILDOZER_SDK"
           echo "Available build-tools in Buildozer SDK:"
           ls -la "$BUILDOZER_SDK/build-tools"
+          echo "NDK verified at: $NDK_DIR"
+          head -n 3 "$NDK_DIR/source.properties" 2>/dev/null || true
 
           echo "Starting Buildozer compilation (Pure 64-bit arm64-v8a)..."
           yes | buildozer -v android debug
