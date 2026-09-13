@@ -13,7 +13,7 @@ jobs:
   build-android-apk:
     name: Compile 64-bit Kivy Android APK
     runs-on: ubuntu-22.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       PIP_USER: "0"
 
@@ -75,9 +75,9 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: ${{ runner.os }}-buildozer-arm64-v5-${{ hashFiles('buildozer.spec') }}
+          key: ${{ runner.os }}-buildozer-arm64-v6-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-arm64-v5-
+            ${{ runner.os }}-buildozer-arm64-v6-
 
       - name: 7. Create Isolated Python 3.10 Venv & Install Buildozer (Cython 0.29.33 & legacy-cgi)
         run: |
@@ -132,7 +132,7 @@ jobs:
               cp -f "$ICON_FILE" ./icon.png
             else
               echo "Creating fallback icon.png..."
-              python3 -c "from PIL import Image; Image.new('RGB', (512, 512), (10, 15, 30)).save('icon.png')" 2>/dev/null || touch icon.png
+              touch icon.png
             fi
           fi
 
@@ -152,7 +152,6 @@ jobs:
 
           # Verify that main.py and buildozer.spec are present
           if [ ! -f "main.py" ] || [ ! -f "buildozer.spec" ]; then
-            echo ""
             echo "CRITICAL ERROR: Required build files missing!"
             exit 1
           fi
@@ -174,31 +173,25 @@ jobs:
           fi
           export PATH="$JAVA_HOME/bin:$PATH"
 
-          # Pre-install all Android SDK licenses to completely prevent prompt skipping
-          python3 -c "
-          import os
-          sdk = os.path.expanduser('~/.buildozer/android/platform/android-sdk/licenses')
-          os.makedirs(sdk, exist_ok=True)
-          with open(os.path.join(sdk, 'android-sdk-license'), 'w') as f:
-              f.write('8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n')
-          with open(os.path.join(sdk, 'android-sdk-preview-license'), 'w') as f:
-              f.write('84831b9409646a918e30573bab4c9c91346d8abd\n')
-          "
-          
-          mkdir -p ~/.android 2>/dev/null || true
-          touch ~/.android/repositories.cfg
-
-          # If system already has Android licenses, copy them over
+          # 1. Pre-copy official Android SDK licenses from runner system
+          mkdir -p "$HOME/.buildozer/android/platform/android-sdk/licenses"
           if [ -d "/usr/local/lib/android/sdk/licenses" ]; then
-            mkdir -p "$HOME/.buildozer/android/platform/android-sdk/licenses"
             cp -r /usr/local/lib/android/sdk/licenses/* "$HOME/.buildozer/android/platform/android-sdk/licenses/" 2>/dev/null || true
           fi
+
+          # 2. Accept any remaining licenses using system sdkmanager
+          if [ -f "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+            cp -r /usr/local/lib/android/sdk/licenses/* "$HOME/.buildozer/android/platform/android-sdk/licenses/" 2>/dev/null || true
+          fi
+
+          mkdir -p ~/.android 2>/dev/null || true
+          touch ~/.android/repositories.cfg
 
           echo "Using JAVA_HOME: $JAVA_HOME"
           java -version
           
           echo "Starting Buildozer Android 64-bit (arm64-v8a) APK compilation..."
-          echo "Auto-accepting all prompts..."
           
           yes | buildozer -v android debug
 
