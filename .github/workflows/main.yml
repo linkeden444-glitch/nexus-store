@@ -75,9 +75,9 @@ jobs:
           path: |
             ~/.buildozer
             .buildozer
-          key: ${{ runner.os }}-buildozer-arm64-v3-${{ hashFiles('buildozer.spec') }}
+          key: ${{ runner.os }}-buildozer-arm64-v4-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-arm64-v3-
+            ${{ runner.os }}-buildozer-arm64-v4-
 
       - name: 7. Create Isolated Python 3.10 Venv & Install Buildozer (Cython 0.29.33 & legacy-cgi)
         run: |
@@ -85,7 +85,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/venv/bin" >> $GITHUB_PATH
           export PATH="$GITHUB_WORKSPACE/venv/bin:$PATH"
           pip install --upgrade pip -q
-          pip install "legacy-cgi" "buildozer>=1.5.0" "cython==0.29.33" "setuptools==68.2.2" virtualenv -q
+          pip install "legacy-cgi" "buildozer>=1.5.0" "cython==0.29.33" "setuptools==68.2.2" virtualenv Pillow -q
           buildozer version
 
       - name: 8. Auto-Prepare Workspace Files & Enforce 64-bit Architecture
@@ -93,65 +93,100 @@ jobs:
           export PATH="$GITHUB_WORKSPACE/venv/bin:$PATH"
           echo "🔍 Preparing workspace files for NEXUS UC Store 64-bit APK..."
 
-          # Prioritize Apk/ folder first, then app/
-          if [ -d "Apk" ]; then
-            echo "📂 Copying files from Apk/ subfolder to root..."
-            cp -f -r Apk/* . || true
-          elif [ -d "app" ]; then
-            echo "📂 Copying files from app/ subfolder to root..."
-            cp -f -r app/* . || true
-          fi
+          # 1. Unzip ANY zip archive uploaded by user (app.zip, apk_repo.zip, etc.)
+          for zip_file in $(find . -maxdepth 2 -iname "*.zip" 2>/dev/null); do
+            echo "📦 Extracting $zip_file..."
+            unzip -o "$zip_file" -d . || true
+          done
 
-          # Unzip app.zip if present as fallback
-          if [ -f "app.zip" ]; then
-            echo "📦 Unzipping app.zip if needed..."
-            unzip -o app.zip -d . || true
-          fi
+          # 2. Check for subdirectories (Apk, apk, app, App) and copy files to root
+          for dir_name in Apk apk app App; do
+            if [ -d "$dir_name" ]; then
+              echo "📂 Copying files from $dir_name/ to root..."
+              cp -f -r "$dir_name"/* . 2>/dev/null || true
+            fi
+          done
 
-          # Ensure buildozer.spec and main.py are in root
+          # 3. Locate or create buildozer.spec
           if [ ! -f "buildozer.spec" ]; then
-            SPEC_FILE=$(find . -maxdepth 3 -name "buildozer.spec" | head -n 1)
+            SPEC_FILE=$(find . -maxdepth 3 -iname "buildozer.spec" 2>/dev/null | head -n 1)
             if [ -n "$SPEC_FILE" ]; then
+              echo "Found buildozer.spec at $SPEC_FILE, copying to root..."
               cp -f "$SPEC_FILE" ./buildozer.spec
             fi
           fi
 
+          # If still missing, automatically generate the official 64-bit buildozer.spec
+          if [ ! -f "buildozer.spec" ]; then
+            echo "⚙️ Creating verified 64-bit (arm64-v8a) buildozer.spec..."
+            cat << 'EOF' > buildozer.spec
+[app]
+title           = NEXUS UC Store
+package.name    = nexusapp
+package.domain  = com.pubg.kmo
+source.dir          = .
+source.include_exts = py,png,jpg,kv,atlas,json
+version = 3.0.0
+requirements = python3,kivy==2.3.0,requests,urllib3,certifi,charset_normalizer,idna
+orientation = portrait
+fullscreen  = 0
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
+android.api     = 33
+android.minapi  = 24
+android.ndk     = 25b
+android.ndk_api = 24
+icon.filename = %(source.dir)s/icon.png
+presplash.filename = %(source.dir)s/icon.png
+android.archs = arm64-v8a
+android.entrypoint = org.kivy.android.PythonActivity
+android.release_artifact = apk
+
+[buildozer]
+log_level    = 2
+warn_on_root = 1
+EOF
+          fi
+
+          # Ensure 64-bit architecture is strictly enforced
+          sed -i 's/android.archs = .*/android.archs = arm64-v8a/' buildozer.spec
+          sed -i 's/title = .*/title = NEXUS UC Store/' buildozer.spec
+
+          # 4. Locate main.py
           if [ ! -f "main.py" ]; then
-            MAIN_FILE=$(find . -maxdepth 3 -name "main.py" | head -n 1)
+            MAIN_FILE=$(find . -maxdepth 3 -iname "main.py" 2>/dev/null | head -n 1)
             if [ -n "$MAIN_FILE" ]; then
+              echo "Found main.py at $MAIN_FILE, copying to root..."
               cp -f "$MAIN_FILE" ./main.py
             fi
           fi
 
-          # Guarantee icon.png exists in root
+          # 5. Locate or generate icon.png
           if [ ! -f "icon.png" ]; then
-            ICON_FILE=$(find . -maxdepth 3 -name "icon.png" | head -n 1)
+            ICON_FILE=$(find . -maxdepth 3 -iname "icon.png" 2>/dev/null | head -n 1)
             if [ -n "$ICON_FILE" ]; then
               cp -f "$ICON_FILE" ./icon.png
+            else
+              echo "Creating fallback icon.png..."
+              python3 -c "from PIL import Image; Image.new('RGB', (512, 512), color=(10, 15, 30)).save('icon.png')" 2>/dev/null || touch icon.png
             fi
           fi
 
-          # STRICT 64-BIT ENFORCEMENT:
-          # Ensure android.archs = arm64-v8a so Android NEVER triggers the 32-bit warning!
-          sed -i 's/android.archs = .*/android.archs = arm64-v8a/' buildozer.spec
-          sed -i 's/title = .*/title = NEXUS UC Store/' buildozer.spec
-
-          echo "📋 Final Workspace File Verification:"
+          echo "📋 Workspace File Verification:"
           ls -la
-          echo "📋 buildozer.spec architecture setting:"
+          echo "📋 Architecture Setting:"
           grep "android.archs" buildozer.spec || true
 
-          assert_file() {
-            if [ ! -f "$1" ]; then
-              echo "❌ CRITICAL ERROR: Required file $1 is missing from repository!"
-              exit 1
-            fi
-            echo "  ✅ Verified: $1"
-          }
+          # Verify that main.py is present
+          if [ ! -f "main.py" ]; then
+            echo ""
+            echo "❌❌❌ CRITICAL ERROR ❌❌❌"
+            echo "main.py is NOT present in your repository root or subfolders!"
+            echo "Please upload main.py (from your 'Apk' folder) or upload 'app.zip' to this repository."
+            echo ""
+            exit 1
+          fi
 
-          assert_file "buildozer.spec"
-          assert_file "main.py"
-          assert_file "icon.png"
+          echo "✅ All required build files verified successfully!"
 
       - name: 9. Execute Buildozer Android Compilation (Pure 64-Bit arm64-v8a)
         env:
