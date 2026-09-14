@@ -72,7 +72,6 @@ jobs:
 
       - name: 7. Install Buildozer & Dependencies in Isolated Environment
         run: |
-          # Create venv outside workspace to prevent workspace pollution
           python3.11 -m venv /tmp/buildozer_venv
           echo "/tmp/buildozer_venv/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=/tmp/buildozer_venv" >> $GITHUB_ENV
@@ -86,7 +85,6 @@ jobs:
 
           pip install --upgrade pip setuptools wheel
           pip install "buildozer>=1.5.0" "cython<3.1.0" virtualenv Pillow "python-for-android==2024.1.21"
-          # Pre-install all python-for-android packaging dependencies
           pip install appdirs "colorama>=0.3.3" jinja2 "sh>=2,<3.0" meson ninja build toml packaging "wheel~=0.43.0"
           buildozer version
 
@@ -98,50 +96,39 @@ jobs:
           export PATH="/tmp/buildozer_venv/bin:$PATH"
           echo "Preparing files for NEXUS UC Store Universal APK compilation..."
 
-          # Extract any zip archives only if main.py is missing
+          # Only copy files from subdirectories IF they are missing in root
+          # NEVER overwrite user's updated root files!
           if [ ! -f "main.py" ]; then
-            for zip_file in $(find . -maxdepth 2 -iname "*.zip" 2>/dev/null); do
-              echo "Extracting archive: $zip_file"
-              unzip -n -q "$zip_file" -d . || true
+            for dir_name in Apk apk app App; do
+              if [ -f "$dir_name/main.py" ]; then
+                echo "Copying main.py from $dir_name/ to root..."
+                cp -f "$dir_name/main.py" ./main.py
+                break
+              fi
             done
           fi
 
-          # Promote files from Apk or app subdirectories if present
-          for dir_name in Apk apk app App; do
-            if [ -d "$dir_name" ]; then
-              echo "Promoting files from $dir_name/ to root..."
-              cp -f -r "$dir_name"/* . 2>/dev/null || true
-            fi
-          done
-
-          # If main.py is in subdirectories and missing in root, copy it
-          if [ ! -f "main.py" ]; then
-            MAIN_FILE=$(find . -maxdepth 3 -iname "main.py" 2>/dev/null | head -n 1)
-            if [ -n "$MAIN_FILE" ]; then
-              echo "Copying main.py from $MAIN_FILE to root..."
-              cp -f "$MAIN_FILE" ./main.py
-            fi
-          fi
-
-          # If icon.png is missing in root, copy it from subdirectories
           if [ ! -f "icon.png" ]; then
-            ICON_FILE=$(find . -maxdepth 3 -iname "icon.png" 2>/dev/null | head -n 1)
-            if [ -n "$ICON_FILE" ]; then
-              echo "Copying icon.png from $ICON_FILE to root..."
-              cp -f "$ICON_FILE" ./icon.png
-            fi
+            for dir_name in Apk apk app App; do
+              if [ -f "$dir_name/icon.png" ]; then
+                echo "Copying icon.png from $dir_name/ to root..."
+                cp -f "$dir_name/icon.png" ./icon.png
+                break
+              fi
+            done
           fi
 
-          # If buildozer.spec is missing in root, copy it from subdirectories
           if [ ! -f "buildozer.spec" ]; then
-            SPEC_FILE=$(find . -maxdepth 3 -iname "buildozer.spec" 2>/dev/null | head -n 1)
-            if [ -n "$SPEC_FILE" ]; then
-              echo "Copying buildozer.spec from $SPEC_FILE to root..."
-              cp -f "$SPEC_FILE" ./buildozer.spec
-            fi
+            for dir_name in Apk apk app App; do
+              if [ -f "$dir_name/buildozer.spec" ]; then
+                echo "Copying buildozer.spec from $dir_name/ to root..."
+                cp -f "$dir_name/buildozer.spec" ./buildozer.spec
+                break
+              fi
+            done
           fi
 
-          # Strictly verify and convert icon.png to genuine PNG format (prevents AAPT2 crunch failure)
+          # Strictly verify and convert icon.png to genuine PNG format
           python3 -c "
           from PIL import Image
           import os
@@ -158,51 +145,46 @@ jobs:
               img.save('icon.png', 'PNG')
           "
 
-          # Enforce Universal ARM architecture (32-bit armeabi-v7a + 64-bit arm64-v8a), build-tools 33.0.2, and clean exclusions in buildozer.spec
+          # Enforce Universal ARM architecture (32-bit armeabi-v7a + 64-bit arm64-v8a)
           sed -i 's/android.archs = .*/android.archs = arm64-v8a, armeabi-v7a/' buildozer.spec
-          sed -i 's/title = .*/title = NEXUS UC Store/' buildozer.spec
+          if ! grep -q "^title" buildozer.spec; then
+            sed -i '/\[app\]/a title = NEXUS UC Store' buildozer.spec
+          fi
           sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
           sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
           sed -i 's/android.ndk = .*/android.ndk = 25b/' buildozer.spec
           sed -i 's/android.ndk_api = .*/android.ndk_api = 24/' buildozer.spec
 
-          # Set build-tools to stable 33.0.2
           if grep -q "android.build_tools_version" buildozer.spec; then
             sed -i 's/android.build_tools_version = .*/android.build_tools_version = 33.0.2/' buildozer.spec
           else
             echo "android.build_tools_version = 33.0.2" >> buildozer.spec
           fi
 
-          # Enforce pure python dependencies + openssl for secure HTTPS
           sed -i 's/requirements = .*/requirements = python3,kivy==2.3.0,requests,urllib3,certifi,chardet,idna,openssl/' buildozer.spec
 
-          # Enforce stable python-for-android release (v2024.01.21) to pin Python 3.11.5 and prevent broken Python 3.14
           if grep -q "p4a.branch" buildozer.spec; then
             sed -i 's/p4a.branch = .*/p4a.branch = v2024.01.21/' buildozer.spec
           else
             sed -i '/\[app\]/a p4a.branch = v2024.01.21' buildozer.spec
           fi
 
-          # Enforce android.skip_update = True to prevent downloading broken preview build-tools 37
           if ! grep -q "android.skip_update" buildozer.spec; then
             sed -i '/\[app\]/a android.skip_update = True' buildozer.spec
           else
             sed -i 's/android.skip_update = .*/android.skip_update = True/' buildozer.spec
           fi
 
-          # Auto accept SDK licenses
           if ! grep -q "android.accept_sdk_license" buildozer.spec; then
             echo "android.accept_sdk_license = True" >> buildozer.spec
           fi
 
-          # Exclude non-app directories from APK payload
           if grep -q "source.exclude_dirs" buildozer.spec; then
             sed -i 's/source.exclude_dirs = .*/source.exclude_dirs = tests, bin, venv, .buildozer, .git, .github, website, Apk, app/' buildozer.spec
           else
             echo "source.exclude_dirs = tests, bin, venv, .buildozer, .git, .github, website, Apk, app" >> buildozer.spec
           fi
 
-          # Exclude non-app file extensions
           if grep -q "source.exclude_exts" buildozer.spec; then
             sed -i 's/source.exclude_exts = .*/source.exclude_exts = spec, pyc, zip, md, yml, yaml, txt, cfg/' buildozer.spec
           else
@@ -210,12 +192,7 @@ jobs:
           fi
 
           echo "Final buildozer.spec parameters:"
-          grep -E "android.archs|title|requirements|p4a.branch|android.accept_sdk_license|android.build_tools_version|source.exclude_dirs" buildozer.spec
-
-          if [ ! -f "main.py" ] || [ ! -f "buildozer.spec" ]; then
-            echo "CRITICAL ERROR: Required build files (main.py or buildozer.spec) missing!"
-            exit 1
-          fi
+          grep -E "android.archs|title|requirements|android.accept_sdk_license|android.build_tools_version|source.exclude_dirs" buildozer.spec
 
       - name: 9. Setup Android SDK/NDK & Execute Buildozer Compilation
         env:
@@ -233,61 +210,36 @@ jobs:
           export PIP_NO_INPUT=1
           export PATH="/tmp/buildozer_venv/bin:$PATH"
 
-          # 1. Take full runner ownership of the pre-installed Android SDK
           sudo chown -R runner:runner /usr/local/lib/android/sdk
           export ANDROID_HOME="/usr/local/lib/android/sdk"
           export ANDROID_SDK_ROOT="/usr/local/lib/android/sdk"
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
 
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          echo "VIRTUAL_ENV: $VIRTUAL_ENV"
-          echo "Python executable: $(which python3)"
-          python3 -c "import os; print('os.environ VIRTUAL_ENV:', os.environ.get('VIRTUAL_ENV'))"
-          echo "Java version:"
-          java -version
-
-          # 2. Pre-accept all Android SDK licenses
-          echo "Accepting Android SDK licenses..."
           yes | sdkmanager --licenses || true
-
-          # 3. Ensure platform 33 and build-tools 33.0.2 are installed in runner SDK
-          echo "Verifying Android SDK platform 33 & build-tools 33.0.2..."
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-
-          # 4. Remove broken preview build-tools (e.g. 35/37 preview) to avoid Gradle crashes
           rm -rf "$ANDROID_HOME/build-tools/37*" "$ANDROID_HOME/build-tools/35*" 2>/dev/null || true
 
-          # 5. Setup Complete Buildozer SDK Directory (~/.buildozer/android/platform/android-sdk)
           BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
           mkdir -p "$BUILDOZER_SDK"
-
-          # Symlink all tools and build-tools directly into Buildozer's default SDK path
           ln -sfn "$ANDROID_HOME/cmdline-tools" "$BUILDOZER_SDK/cmdline-tools"
           ln -sfn "$ANDROID_HOME/cmdline-tools/latest" "$BUILDOZER_SDK/tools"
           ln -sfn "$ANDROID_HOME/platform-tools" "$BUILDOZER_SDK/platform-tools"
           ln -sfn "$ANDROID_HOME/platforms" "$BUILDOZER_SDK/platforms"
           ln -sfn "$ANDROID_HOME/build-tools" "$BUILDOZER_SDK/build-tools"
 
-          # Pre-accept licenses in Buildozer SDK and runner SDK
           mkdir -p "$BUILDOZER_SDK/licenses" "$ANDROID_HOME/licenses"
           printf "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n" > "$BUILDOZER_SDK/licenses/android-sdk-license"
           printf "84831b9409646a918e30573bab4c9c91346d8abd\n" > "$BUILDOZER_SDK/licenses/android-sdk-preview-license"
           cp -r "$BUILDOZER_SDK/licenses"/* "$ANDROID_HOME/licenses/" 2>/dev/null || true
 
-          # 6. Setup Android NDK r25b
           NDK_DIR="$HOME/.buildozer/android/platform/android-ndk-r25b"
           if [ ! -d "$NDK_DIR" ]; then
-            echo "Searching for pre-installed NDK r25..."
             SYSTEM_NDK_25=$(ls -d /usr/local/lib/android/sdk/ndk/25* 2>/dev/null | head -n 1)
             mkdir -p "$HOME/.buildozer/android/platform"
-
             if [ -n "$SYSTEM_NDK_25" ] && [ -d "$SYSTEM_NDK_25" ]; then
-              echo "Linking runner pre-installed NDK from $SYSTEM_NDK_25 to $NDK_DIR..."
               ln -sfn "$SYSTEM_NDK_25" "$NDK_DIR"
             else
-              echo "Downloading Android NDK r25b directly..."
               curl -s -L -o /tmp/ndk25b.zip "https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
-              echo "Extracting Android NDK r25b..."
               unzip -q /tmp/ndk25b.zip -d "$HOME/.buildozer/android/platform"
               rm -f /tmp/ndk25b.zip
             fi
@@ -298,7 +250,6 @@ jobs:
           export ANDROIDNDK="$NDK_DIR"
           export NDK_HOME="$NDK_DIR"
 
-          # Explicitly inject android.sdk_path and android.ndk_path under [app]
           sed -i '/^android.sdk_path/d' buildozer.spec
           sed -i '/^android.ndk_path/d' buildozer.spec
           sed -i "/\[app\]/a android.sdk_path = $BUILDOZER_SDK" buildozer.spec
@@ -307,37 +258,13 @@ jobs:
           mkdir -p ~/.android
           touch ~/.android/repositories.cfg
 
-          echo "=== Android Build Environment Verification ==="
-          echo "Buildozer SDK Directory ($BUILDOZER_SDK):"
-          ls -la "$BUILDOZER_SDK"
-          echo "Available build-tools in Buildozer SDK:"
-          ls -la "$BUILDOZER_SDK/build-tools"
-          echo "Checking aidl in Buildozer SDK:"
-          find "$BUILDOZER_SDK/build-tools" -name "aidl" -ls || true
-          echo "Available platforms in Buildozer SDK:"
-          ls -la "$BUILDOZER_SDK/platforms"
-          echo "NDK location: $NDK_DIR"
-          head -n 3 "$NDK_DIR/source.properties" 2>/dev/null || true
-
-          # Pre-clone stable python-for-android release v2024.01.21 (ensures Python 3.11.5 + Kivy 2.3.0)
           P4A_DIR="$HOME/.buildozer/android/platform/python-for-android"
           if [ ! -d "$P4A_DIR" ]; then
-            echo "Setting up python-for-android stable release v2024.01.21..."
             git clone -b v2024.01.21 --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
           fi
 
           echo "Starting Buildozer compilation (Universal arm64-v8a + armeabi-v7a)..."
-          buildozer -v android debug || {
-            echo "==================== BUILD FAILED: PRINTING FULL P4A & BUILDOZER LOGS ===================="
-            if [ -f .buildozer/buildozer.log ]; then
-              tail -n 300 .buildozer/buildozer.log
-            fi
-            for logf in $(find .buildozer/ -name "*.log" 2>/dev/null); do
-              echo "--- LOG FILE: $logf ---"
-              tail -n 100 "$logf"
-            done
-            exit 1
-          }
+          buildozer -v android debug
 
       - name: 10. Verify & Check Universal APK Output
         run: |
@@ -350,6 +277,8 @@ jobs:
               echo "Successfully generated APK: $f"
               ls -lh "$f"
               sha256sum "$f"
+              mv "$f" "bin/NEXUS-UC-Store-Universal-v3.0.0.apk"
+              break
             fi
           done
 
@@ -357,6 +286,8 @@ jobs:
             echo "CRITICAL ERROR: No .apk binary found in bin/ directory!"
             exit 1
           fi
+          echo "Final verified output APK: bin/NEXUS-UC-Store-Universal-v3.0.0.apk"
+          ls -lh bin/
 
       - name: 11. Upload Compiled Universal APK Package
         uses: actions/upload-artifact@v4
