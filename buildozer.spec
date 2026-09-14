@@ -27,6 +27,7 @@ android.accept_sdk_license = True
 android.archs = arm64-v8a, armeabi-v7a
 android.entrypoint = org.kivy.android.PythonActivity
 android.release_artifact = apk
+
 [buildozer]
 log_level = 2
 warn_on_root = 1
