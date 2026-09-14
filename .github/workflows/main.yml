@@ -148,7 +148,7 @@ jobs:
           # Enforce Universal ARM architecture (32-bit armeabi-v7a + 64-bit arm64-v8a)
           sed -i 's/android.archs = .*/android.archs = arm64-v8a, armeabi-v7a/' buildozer.spec
           if ! grep -q "^title" buildozer.spec; then
-            sed -i '/\[app\]/a title = NEXUS UC Store' buildozer.spec
+            sed -i '/\[app\]/a title = Nexus UC Store' buildozer.spec
           fi
           sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
           sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
@@ -277,7 +277,7 @@ jobs:
               echo "Successfully generated APK: $f"
               ls -lh "$f"
               sha256sum "$f"
-              mv "$f" "bin/NEXUS-UC-Store-Universal-v3.0.0.apk"
+              mv "$f" "bin/NEXUS-UC-Store-Universal-v1.0.0.apk"
               break
             fi
           done
@@ -286,14 +286,14 @@ jobs:
             echo "CRITICAL ERROR: No .apk binary found in bin/ directory!"
             exit 1
           fi
-          echo "Final verified output APK: bin/NEXUS-UC-Store-Universal-v3.0.0.apk"
+          echo "Final verified output APK: bin/NEXUS-UC-Store-Universal-v1.0.0.apk"
           ls -lh bin/
 
       - name: 11. Upload Compiled Universal APK Package
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: NEXUS-UC-Store-v3.0.0-Universal-APK
+          name: NEXUS-UC-Store-v1.0.0-Universal-APK
           path: bin/*.apk
           if-no-files-found: error
           retention-days: 30
