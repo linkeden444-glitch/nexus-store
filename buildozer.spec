@@ -15,12 +15,10 @@ android.api = 33
 android.minapi = 24
 android.ndk = 25b
 android.ndk_api = 24
-android.build_tools_version = 33.0.2
+android.skip_update = True
 icon.filename = %(source.dir)s/icon.png
 presplash.filename = %(source.dir)s/icon.png
-# AUTO ACCEPT SDK LICENSES
 android.accept_sdk_license = True
-# PURE 64-BIT ARM ARCHITECTURE - High-performance modern 64-bit Android devices
 android.archs = arm64-v8a
 android.entrypoint = org.kivy.android.PythonActivity
 android.release_artifact = apk
