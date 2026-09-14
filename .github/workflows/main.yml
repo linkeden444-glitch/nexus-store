@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build-android-apk:
-    name: Compile 64-bit Kivy Android APK
+    name: Compile Universal (32-bit & 64-bit) Kivy Android APK
     runs-on: ubuntu-22.04
     timeout-minutes: 60
 
@@ -96,7 +96,7 @@ jobs:
           export VIRTUAL_ENV="/tmp/buildozer_venv"
           export PIP_USER=0
           export PATH="/tmp/buildozer_venv/bin:$PATH"
-          echo "Preparing files for NEXUS UC Store 64-bit APK compilation..."
+          echo "Preparing files for NEXUS UC Store Universal APK compilation..."
 
           # Extract any zip archives only if main.py is missing
           if [ ! -f "main.py" ]; then
@@ -158,8 +158,8 @@ jobs:
               img.save('icon.png', 'PNG')
           "
 
-          # Enforce pure 64-bit ARM architecture, build-tools 33.0.2, and clean exclusions in buildozer.spec
-          sed -i 's/android.archs = .*/android.archs = arm64-v8a/' buildozer.spec
+          # Enforce Universal ARM architecture (32-bit armeabi-v7a + 64-bit arm64-v8a), build-tools 33.0.2, and clean exclusions in buildozer.spec
+          sed -i 's/android.archs = .*/android.archs = arm64-v8a, armeabi-v7a/' buildozer.spec
           sed -i 's/title = .*/title = NEXUS UC Store/' buildozer.spec
           sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
           sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
@@ -326,7 +326,7 @@ jobs:
             git clone -b v2024.01.21 --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
           fi
 
-          echo "Starting Buildozer compilation (Pure 64-bit arm64-v8a)..."
+          echo "Starting Buildozer compilation (Universal arm64-v8a + armeabi-v7a)..."
           buildozer -v android debug || {
             echo "==================== BUILD FAILED: PRINTING FULL P4A & BUILDOZER LOGS ===================="
             if [ -f .buildozer/buildozer.log ]; then
@@ -339,7 +339,7 @@ jobs:
             exit 1
           }
 
-      - name: 10. Verify & Check 64-Bit APK Output
+      - name: 10. Verify & Check Universal APK Output
         run: |
           echo "Checking compiled APK in bin/ directory..."
           ls -la bin/ || true
@@ -358,11 +358,11 @@ jobs:
             exit 1
           fi
 
-      - name: 11. Upload Compiled 64-Bit APK Package
+      - name: 11. Upload Compiled Universal APK Package
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: NEXUS-UC-Store-v3.0.0-ARM64-64bit-APK
+          name: NEXUS-UC-Store-v3.0.0-Universal-APK
           path: bin/*.apk
           if-no-files-found: error
           retention-days: 30
