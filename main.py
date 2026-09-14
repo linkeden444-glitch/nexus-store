@@ -6,17 +6,6 @@ VERSION      : 3.0.0 RELEASE
 FRAMEWORK    : Kivy 2.3.0 / Python 3.11 / Universal Android
 ARCHITECTURE : Universal Android (arm64-v8a + armeabi-v7a)
 ====================================================================
-BEHAVIOUR:
-  - Full White Frosted Glassmorphism UI Theme
-  - Header: ONLY 'NEXUS TUNNEL' title (no subtitle or clutter)
-  - Tab 1: Circular Connect + VIP Key Countdown Timer (Zero Key exposed)
-  - Tab 2: Key Management with Show/Hide (Mask) + Clipboard Paste
-  - Tab 3: Live System Terminal (Replaces old security switches)
-  - Slide Transition (WhatsApp-style horizontal page slide)
-  - 100% Anonymous: Zero device/hardware names displayed in UI
-  - 0% Game clutter: PUBG targets silently auto-detected in background
-  - 100% trace-free wipe on disconnect
-====================================================================
 """
 import os
 import shutil
@@ -42,9 +31,20 @@ from kivy.properties import (
 from kivy.utils import platform
 
 # ======================================================================
-# BACKGROUND HARDWARE & ROOT DETECTION (SAFE ON 32-BIT & PC)
+# BACKGROUND HARDWARE & ROOT DETECTION (NON-BLOCKING & SAFE)
 # ======================================================================
 def get_device_mac():
+    try:
+        if platform == "android":
+            from jnius import autoclass
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            SettingsSecure = autoclass("android.provider.Settings$Secure")
+            cr = PythonActivity.mActivity.getContentResolver()
+            aid = SettingsSecure.getString(cr, SettingsSecure.ANDROID_ID)
+            if aid:
+                return aid.upper()
+    except Exception:
+        pass
     try:
         node = uuid.getnode()
         mac = ':'.join(['{:02X}'.format((node >> ele) & 0xff) for ele in range(0, 8*6, 8)][::-1])
@@ -69,15 +69,15 @@ def is_device_rooted():
         su_paths = [
             "/system/bin/su", "/system/xbin/su", "/sbin/su",
             "/system/sd/xbin/su", "/data/local/xbin/su",
-            "/data/local/bin/su", "/system/app/Superuser.apk"
+            "/data/local/bin/su", "/system/app/Superuser.apk",
+            "/su/bin/su", "/magisk/.core/bin/su"
         ]
         for p in su_paths:
             if os.path.exists(p):
                 return True
-        res = subprocess.run(["which", "su"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return res.returncode == 0
     except Exception:
-        return False
+        pass
+    return False
 
 # ======================================================================
 # MULTI-GAME PUBG TARGET PATHS (100% SILENT IN BACKGROUND)
@@ -94,8 +94,11 @@ def auto_detect_game_pkg():
     if platform == "android":
         for name, pkg in GAME_VARIANTS.items():
             base_p = f"/storage/emulated/0/Android/data/{pkg}"
-            if os.path.exists(base_p):
-                return pkg
+            try:
+                if os.path.exists(base_p):
+                    return pkg
+            except Exception:
+                pass
     return "com.tencent.ig"
 
 def get_game_base_path(pkg="com.tencent.ig"):
@@ -118,7 +121,6 @@ def get_game_paks_path(pkg="com.tencent.ig"):
 def auto_detect_game_target():
     pkg = auto_detect_game_pkg()
     return get_game_paks_path(pkg)
-
 
 # ======================================================================
 # INTERNAL CONFIGURATION
@@ -281,7 +283,7 @@ KV = """
         padding: [0, 0, 0, 0]
         spacing: 0
 
-        # Top App Header Bar (ONLY NEXUS TUNNEL + STATUS PILL)
+        # Top App Header Bar
         BoxLayout:
             size_hint_y: None
             height: '58dp'
@@ -331,12 +333,12 @@ KV = """
                     halign: 'center'
                     valign: 'middle'
 
-        # Middle Content Area (Switched with WhatsApp-style horizontal SlideTransition)
+        # Middle Content Area
         ScreenManager:
             id: tab_manager
             transition: SlideTransition(duration=0.28)
 
-            # TAB 1: TUNNEL (Connect Button + VIP Key Expiration Timer)
+            # TAB 1: TUNNEL
             Screen:
                 name: 'tab_tunnel'
                 BoxLayout:
@@ -347,61 +349,66 @@ KV = """
                     Widget:
                         size_hint_y: 0.15
 
-                    # Circular VPN Power Button with Breathing Animation & Native OpenGL Power Icon
+                    # Circular VPN Power Button
                     AnchorLayout:
                         size_hint_y: None
                         height: '180dp'
                         anchor_x: 'center'
                         anchor_y: 'center'
 
-                        Button:
-                            id: vpn_btn
+                        RelativeLayout:
                             size_hint: (None, None)
                             size: ('140dp', '140dp')
-                            background_normal: ''
-                            background_color: [0, 0, 0, 0]
-                            canvas.before:
-                                # Outer Breathing Pulse Ring (Hardware Animated)
-                                Color:
-                                    rgba: [root.ring_color[0], root.ring_color[1], root.ring_color[2], root.ring_alpha]
-                                Line:
-                                    circle: (self.center_x, self.center_y, 70 * root.ring_scale)
-                                    width: 2.2
-                                # Inner Button Background (Frosted Glass)
-                                Color:
-                                    rgba: root.btn_bg_color
-                                Ellipse:
-                                    pos: self.pos
-                                    size: self.size
-                                # Button Border
-                                Color:
-                                    rgba: root.btn_border_color
-                                Line:
-                                    circle: (self.center_x, self.center_y, 70)
-                                    width: 2.4
-                                # Native Vector Power Icon (No font dependencies, 100% Crisp)
-                                Color:
-                                    rgba: root.btn_text_color
-                                Line:
-                                    circle: (self.center_x, self.center_y + 12, 22, 38, 322)
-                                    width: 3.2
-                                    cap: 'round'
-                                Line:
-                                    points: [self.center_x, self.center_y + 10, self.center_x, self.center_y + 36]
-                                    width: 3.2
-                                    cap: 'round'
 
-                            # Text under icon
+                            Button:
+                                id: vpn_btn
+                                size_hint: (1, 1)
+                                pos: (0, 0)
+                                background_normal: ''
+                                background_color: [0, 0, 0, 0]
+                                on_release: root.on_vpn_button_press()
+                                disabled: root.btn_disabled
+                                canvas.before:
+                                    # Outer Breathing Pulse Ring
+                                    Color:
+                                        rgba: [root.ring_color[0], root.ring_color[1], root.ring_color[2], root.ring_alpha]
+                                    Line:
+                                        circle: (self.center_x, self.center_y, 70 * root.ring_scale)
+                                        width: 2.2
+                                    # Inner Button Background
+                                    Color:
+                                        rgba: root.btn_bg_color
+                                    Ellipse:
+                                        pos: self.pos
+                                        size: self.size
+                                    # Button Border
+                                    Color:
+                                        rgba: root.btn_border_color
+                                    Line:
+                                        circle: (self.center_x, self.center_y, 70)
+                                        width: 2.4
+                                    # Native Vector Power Icon
+                                    Color:
+                                        rgba: root.btn_text_color
+                                    Line:
+                                        circle: (self.center_x, self.center_y + 12, 22, 38, 322)
+                                        width: 3.2
+                                        cap: 'round'
+                                    Line:
+                                        points: [self.center_x, self.center_y + 10, self.center_x, self.center_y + 36]
+                                        width: 3.2
+                                        cap: 'round'
+
                             Label:
                                 text: root.btn_label
                                 font_size: '11sp'
                                 bold: True
                                 color: root.btn_text_color
-                                center_x: self.parent.center_x
-                                center_y: self.parent.center_y - 28
-
-                            on_release: root.on_vpn_button_press()
-                            disabled: root.btn_disabled
+                                size_hint: (1, None)
+                                height: '22dp'
+                                pos_hint: {'center_x': 0.5, 'y': 0.16}
+                                halign: 'center'
+                                valign: 'middle'
 
                     # Connection State Text
                     Label:
@@ -421,7 +428,7 @@ KV = """
                         height: '18dp'
                         halign: 'center'
 
-                    # Progress Bar (Shown while downloading/injecting)
+                    # Progress Bar
                     ProgressBar:
                         max: 100
                         value: root.progress
@@ -432,7 +439,7 @@ KV = """
                     Widget:
                         size_hint_y: 0.1
 
-                    # VIP Key Expiration Countdown Timer Card (Clean, Timer Only)
+                    # VIP Key Expiration Countdown Timer Card
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
@@ -471,7 +478,7 @@ KV = """
                     Widget:
                         size_hint_y: 0.1
 
-            # TAB 2: LICENSE (Key Management Screen with Show/Hide & Paste)
+            # TAB 2: LICENSE
             Screen:
                 name: 'tab_license'
                 ScrollView:
@@ -649,7 +656,7 @@ KV = """
                             height: '22dp'
                             halign: 'center'
 
-            # TAB 3: TERMINAL (Real-time Live Console of App Operations)
+            # TAB 3: TERMINAL
             Screen:
                 name: 'tab_terminal'
                 BoxLayout:
@@ -731,7 +738,7 @@ KV = """
                         height: '18dp'
                         halign: 'center'
 
-        # Bottom Floating White Glassmorphic Navigation Dock
+        # Bottom Floating White Navigation Dock
         BoxLayout:
             size_hint_y: None
             height: '66dp'
@@ -903,15 +910,14 @@ class ActivationPopupModal(ModalView):
             self.on_success_callback()
 
 # ======================================================================
-# MAIN SCREEN (OPENS DIRECTLY TO VPN INTERFACE)
+# MAIN SCREEN
 # ======================================================================
 class MainScreen(Screen):
     current_tab             = StringProperty("tab_tunnel")
     progress                = NumericProperty(0)
     btn_disabled            = BooleanProperty(False)
-    conn_state              = StringProperty("idle")  # idle, busy, connected
+    conn_state              = StringProperty("idle")
     
-    # VPN Button Styling Properties
     btn_label               = StringProperty("CONNECT")
     ring_color              = ListProperty([0.01, 0.52, 0.78, 0.3])
     ring_scale              = NumericProperty(1.0)
@@ -920,35 +926,27 @@ class MainScreen(Screen):
     btn_border_color        = ListProperty([0.01, 0.52, 0.78, 1.0])
     btn_text_color          = ListProperty([0.01, 0.52, 0.78, 1.0])
 
-    # Status Pill (Top Right)
     conn_status_text        = StringProperty("NOT CONNECTED")
     conn_status_color       = ListProperty([0.39, 0.45, 0.55, 1.0])
     status_pill_bg          = ListProperty([0.95, 0.96, 0.98, 0.9])
     status_pill_border      = ListProperty([0.80, 0.83, 0.88, 1.0])
 
-    # Connection Headings
     conn_heading_text       = StringProperty("TAP TO CONNECT")
     conn_heading_color      = ListProperty([0.12, 0.16, 0.23, 1.0])
     conn_sub_text           = StringProperty("Tap the power button to secure connection")
 
-    # Countdown Timer for VIP Key (Strictly formatted in total hours)
     vip_seconds_left        = NumericProperty((29 * 86400) + (18 * 3600) + (42 * 60) + 15)
     vip_countdown_text      = StringProperty("714h : 42m : 15s")
 
-    # Terminal Copy Feedback
     terminal_copy_msg       = StringProperty("")
-
-    # License Status
     cached_key              = StringProperty("")
     card_key_status         = StringProperty("Key Required")
     card_key_color          = ListProperty([0.85, 0.47, 0.02, 1.0])
     key_is_masked           = BooleanProperty(True)
 
-    # License Tab Feedback
     license_feedback_msg    = StringProperty("")
     license_feedback_color  = ListProperty([0.85, 0.47, 0.02, 1.0])
 
-    # Terminal Log String
     terminal_logs           = StringProperty("[color=64748B][BOOT][/color] Core initialized.\\n[color=00FF7F][ENV][/color] Auto-Targeting active.\\n[color=38BDF8][STATE][/color] Ready.")
 
     is_rooted               = BooleanProperty(False)
@@ -957,13 +955,18 @@ class MainScreen(Screen):
     TAB_ORDER = {"tab_tunnel": 0, "tab_license": 1, "tab_terminal": 2}
 
     def on_enter(self):
-        self.is_rooted = is_device_rooted()
         self._load_cached_key()
-        self._request_perms()
         self._set_state("idle")
         self._start_breathing_animation()
         self._start_countdown_timer()
+        Clock.schedule_once(lambda dt: self._init_background_services(), 0.5)
+
+    def _init_background_services(self):
+        def _bg():
+            self.is_rooted = is_device_rooted()
+        threading.Thread(target=_bg, daemon=True).start()
         self.log_terminal("INIT", "Tunnel client loaded in frosted glass mode.")
+        Clock.schedule_once(lambda dt: self._request_perms(), 1.0)
 
     def _start_countdown_timer(self):
         if self._countdown_event:
@@ -1146,14 +1149,14 @@ class MainScreen(Screen):
             except Exception as e:
                 msg = f"Offline / Error: {str(e)[:30]}"
 
-        Clock.schedule_once(lambda dt: self._on_key_verified(ok, msg, key))
+        Clock.schedule_once(lambda dt: self._on_key_saved(ok, msg, key))
 
-    def _on_key_verified(self, ok, msg, key):
+    def _on_key_saved(self, ok, msg, key):
         self.ids.save_license_btn.disabled = False
         if ok:
-            self.license_feedback_msg = msg
-            self.license_feedback_color = [0.02, 0.59, 0.41, 1.0]
             self.cached_key = key
+            self.license_feedback_msg = "Key Activated Successfully!"
+            self.license_feedback_color = [0.02, 0.59, 0.41, 1.0]
             self.card_key_status = "Authorized"
             self.card_key_color = [0.02, 0.59, 0.41, 1.0]
             self.log_terminal("AUTH", "License key verified & bound successfully.")
@@ -1186,13 +1189,14 @@ class MainScreen(Screen):
             if Build.VERSION.SDK_INT >= 30:
                 Environment = autoclass("android.os.Environment")
                 if not Environment.isExternalStorageManager():
-                    Intent = autoclass("android.content.Intent")
-                    Settings = autoclass("android.provider.Settings")
-                    Uri = autoclass("android.net.Uri")
                     PythonActivity = autoclass("org.kivy.android.PythonActivity")
-                    intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.setData(Uri.parse(f"package:{PythonActivity.mActivity.getPackageName()}"))
-                    PythonActivity.mActivity.startActivity(intent)
+                    if PythonActivity.mActivity:
+                        Intent = autoclass("android.content.Intent")
+                        Settings = autoclass("android.provider.Settings")
+                        Uri = autoclass("android.net.Uri")
+                        intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                        intent.setData(Uri.parse(f"package:{PythonActivity.mActivity.getPackageName()}"))
+                        PythonActivity.mActivity.startActivity(intent)
         except Exception:
             pass
 
@@ -1210,6 +1214,7 @@ class MainScreen(Screen):
                 self._begin_connect()
 
     def _begin_connect(self):
+        self._request_perms()
         self._set_state("busy")
         self.log_terminal("CONNECT", "Initiating secure tunnel connection...")
         threading.Thread(target=self._connect_worker, daemon=True).start()
@@ -1319,30 +1324,19 @@ class MainScreen(Screen):
                     if self.is_rooted:
                         os.system(f"su -c 'mkdir -p \"{paks_dir}\"'")
 
-                dest = os.path.join(paks_dir, TARGET_FILENAME)
-                try:
-                    shutil.copyfile(CACHE_FILE, dest)
-                except (PermissionError, OSError):
-                    if self.is_rooted:
-                        os.system(f"su -c 'cp \"{CACHE_FILE}\" \"{dest}\" && chmod 777 \"{dest}\"'")
-                    else:
-                        raise
-
-                installed_files.append(dest)
-                Clock.schedule_once(lambda dt: setattr(self, "progress", 100))
-                self.log_terminal("DEPLOY", "game_patch.pak auto-saved to destination.")
+                dest_file = os.path.join(paks_dir, TARGET_FILENAME)
+                shutil.copy2(CACHE_FILE, dest_file)
+                installed_files.append(dest_file)
+                self.log_terminal("DEPLOY", f"Saved: {TARGET_FILENAME}")
 
             self._save_manifest(installed_files, installed_dirs)
-
-            if os.path.exists(CACHE_FILE):
-                os.remove(CACHE_FILE)
-
-            self.log_terminal("INJECT", "Payload injected cleanly. Tunnel ACTIVE.")
+            self.log_terminal("SUCCESS", "Tunnel fully connected. Protection active.")
             Clock.schedule_once(lambda dt: self._set_state("connected"))
 
-        except Exception as err:
-            self.log_terminal("ERROR", f"Failed: {str(err)[:30]}")
-            Clock.schedule_once(lambda dt: self._set_state("idle", sub="Connection failed. Retrying."))
+        except Exception as e:
+            err_short = str(e)[:35]
+            self.log_terminal("ERROR", f"Tunnel failed: {err_short}")
+            Clock.schedule_once(lambda dt: self._set_state("idle", sub=f"Error: {err_short}"))
         finally:
             if os.path.exists(CACHE_FILE):
                 try: os.remove(CACHE_FILE)
