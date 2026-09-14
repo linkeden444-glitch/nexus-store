@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NEXUS TUNNEL - Luxury Frosted Glass VPN</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 20%, #e2e8f0 0%, #cbd5e1 60%, #94a3b8 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            color: #0f172a;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .header-title h1 {
+            font-size: 26px;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #0284C7, #2563EB, #4F46E5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        /* Mobile Phone Mockup Frame */
+        .phone-frame {
+            width: 365px;
+            height: 720px;
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.96) 0%, rgba(241, 245, 249, 0.93) 50%, rgba(226, 232, 240, 0.96) 100%);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-radius: 46px;
+            border: 8px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 30px 80px -15px rgba(15, 23, 42, 0.35), 0 0 35px rgba(2, 132, 199, 0.2);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Status Bar */
+        .phone-status-bar {
+            height: 32px;
+            background: rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #475569;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            user-select: none;
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* Top Header: ONLY "NEXUS TUNNEL" + STATUS PILL */
+        .app-header {
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 5;
+        }
+
+        .app-brand {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            background: linear-gradient(90deg, #0284C7, #0369A1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(241, 245, 249, 0.9);
+            border: 1px solid #CBD5E1;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: #64748B;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.35s ease;
+        }
+
+        .status-pill.connected {
+            background: rgba(209, 250, 229, 0.9);
+            border-color: #10B981;
+            color: #047857;
+            box-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #94A3B8;
+            transition: all 0.4s ease;
+        }
+
+        .status-pill.connected .status-dot {
+            background: #10B981;
+            box-shadow: 0 0 8px #10B981;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* ======================================================= */
+        /* TOUCH / MOUSE SWIPE VIEWPORT (WHATSAPP-STYLE)           */
+        /* ======================================================= */
+        .tab-slider-wrapper {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+            cursor: grab;
+            touch-action: pan-y;
+        }
+
+        .tab-slider-wrapper:active {
+            cursor: grabbing;
+        }
+
+        .tab-slider-container {
+            display: flex;
+            width: 300%;
+            height: 100%;
+            transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+        }
+
+        .tab-slide {
+            width: 33.3333%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            display: flex;
+            flex-direction: column;
+            padding: 18px 20px;
+        }
+
+        .tab-slide::-webkit-scrollbar {
+            width: 4px;
+        }
+        .tab-slide::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+
+        /* ======================================================= */
+        /* TAB 1: TUNNEL (Clean Connect + VIP Countdown Timer)     */
+        /* ======================================================= */
+        .vpn-center-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .vpn-power-wrap {
+            position: relative;
+            width: 168px;
+            height: 168px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 22px;
+        }
+
+        .ripple-1, .ripple-2 {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+
+        .ripple-1 {
+            width: 154px;
+            height: 154px;
+            border: 2px solid rgba(2, 132, 199, 0.45);
+            animation: pulseWave 2.4s infinite ease-in-out;
+        }
+
+        .ripple-2 {
+            width: 170px;
+            height: 170px;
+            border: 1.5px dashed rgba(14, 165, 233, 0.35);
+            animation: pulseWave2 2.4s infinite ease-in-out;
+        }
+
+        .vpn-power-wrap.connected .ripple-1 {
+            border-color: rgba(16, 185, 129, 0.65);
+            animation: pulseWaveConnected 1.6s infinite ease-in-out;
+        }
+
+        .vpn-power-wrap.connected .ripple-2 {
+            border-color: rgba(5, 150, 105, 0.4);
+            animation: pulseWave2Connected 1.6s infinite ease-in-out;
+        }
+
+        @keyframes pulseWave {
+            0%   { transform: scale(0.96); opacity: 0.3; }
+            50%  { transform: scale(1.10); opacity: 0.8; }
+            100% { transform: scale(0.96); opacity: 0.3; }
+        }
+
+        @keyframes pulseWave2 {
+            0%   { transform: scale(0.92); opacity: 0.15; }
+            50%  { transform: scale(1.18); opacity: 0.5; }
+            100% { transform: scale(0.92); opacity: 0.15; }
+        }
+
+        @keyframes pulseWaveConnected {
+            0%   { transform: scale(0.96); opacity: 0.4; }
+            50%  { transform: scale(1.12); opacity: 0.95; }
+            100% { transform: scale(0.96); opacity: 0.4; }
+        }
+
+        @keyframes pulseWave2Connected {
+            0%   { transform: scale(0.92); opacity: 0.25; }
+            50%  { transform: scale(1.22); opacity: 0.65; }
+            100% { transform: scale(0.92); opacity: 0.25; }
+        }
+
+        .vpn-power-btn {
+            width: 134px;
+            height: 134px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #FFFFFF 0%, #F1F5F9 100%);
+            border: 3px solid #0284C7;
+            box-shadow: 0 14px 35px rgba(2, 132, 199, 0.25), 0 2px 5px rgba(255, 255, 255, 0.9) inset;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .vpn-power-btn:hover {
+            border-color: #0369A1;
+            transform: scale(1.03);
+            box-shadow: 0 16px 40px rgba(2, 132, 199, 0.35);
+        }
+
+        .vpn-power-btn:active {
+            transform: scale(0.96);
+        }
+
+        .vpn-power-btn.connected {
+            background: linear-gradient(145deg, #FFFFFF 0%, #ECFDF5 100%);
+            border-color: #10B981;
+            box-shadow: 0 14px 40px rgba(16, 185, 129, 0.35);
+        }
+
+        .power-svg {
+            width: 44px;
+            height: 44px;
+            fill: none;
+            stroke: #0284C7;
+            stroke-width: 3.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 2px 4px rgba(2, 132, 199, 0.3));
+            transition: all 0.3s ease;
+        }
+
+        .vpn-power-btn.connected .power-svg {
+            stroke: #059669;
+            filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.4));
+        }
+
+        .power-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: #0369A1;
+            margin-top: 6px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .vpn-power-btn.connected .power-label {
+            color: #047857;
+        }
+
+        .connection-state-text {
+            font-size: 16px;
+            font-weight: 800;
+            color: #1E293B;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            transition: color 0.3s ease;
+        }
+
+        .connection-sub-text {
+            font-size: 11.5px;
+            color: #64748B;
+            margin-bottom: 24px;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        /* Clean Frosted Glass KEY EXPIRATION TIMER (Zero extra clutter) */
+        .key-timer-card {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1.2px solid rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 16px 18px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(255, 255, 255, 0.8) inset;
+            text-align: center;
+        }
+
+        .timer-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: #0284C7;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .digital-countdown {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0F172A;
+            letter-spacing: 1.2px;
+            padding: 4px 0;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            display: block;
+            text-align: center;
+        }
+
+        /* ======================================================= */
+        /* TAB 2: LICENSE SCREEN (Add, Deactivate, Delete Actions) */
+        /* ======================================================= */
+        .tab-heading {
+            text-align: center;
+            margin: 6px 0 16px;
+        }
+
+        .tab-heading h2 {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0284C7;
+            letter-spacing: 1px;
+        }
+
+        .tab-heading p {
+            font-size: 11px;
+            color: #64748B;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        .key-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .cyber-input {
+            width: 100%;
+            background: #FFFFFF;
+            border: 1.5px solid #CBD5E1;
+            border-radius: 12px;
+            padding: 13px 44px 13px 14px;
+            color: #0F172A;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            outline: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+            transition: all 0.3s ease;
+        }
+
+        .cyber-input:focus {
+            border-color: #0284C7;
+            box-shadow: 0 0 16px rgba(2, 132, 199, 0.25);
+        }
+
+        .btn-toggle-eye {
+            position: absolute;
+            right: 12px;
+            background: transparent;
+            border: none;
+            color: #64748B;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .btn-toggle-eye:hover {
+            color: #0284C7;
+        }
+
+        .btn-paste {
+            width: 100%;
+            background: #F1F5F9;
+            border: 1px solid #CBD5E1;
+            border-radius: 10px;
+            padding: 10px;
+            color: #0369A1;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-paste:hover {
+            background: #E2E8F0;
+            border-color: #0284C7;
+        }
+
+        /* 3 Clean Action Buttons (Add/Activate, Deactivate, Delete) */
+        .btn-action-primary {
+            width: 100%;
+            background: linear-gradient(90deg, #0284C7, #0369A1);
+            border: none;
+            border-radius: 12px;
+            padding: 13px;
+            color: #FFFFFF;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-primary:hover {
+            background: linear-gradient(90deg, #0369A1, #075985);
+            transform: translateY(-1px);
+        }
+
+        .btn-action-secondary {
+            width: 100%;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1.2px solid rgba(245, 158, 11, 0.4);
+            border-radius: 12px;
+            padding: 11px;
+            color: #D97706;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-secondary:hover {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #D97706;
+        }
+
+        .btn-action-danger {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1.2px solid rgba(239, 68, 68, 0.35);
+            border-radius: 12px;
+            padding: 11px;
+            color: #DC2626;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-danger:hover {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: #EF4444;
+        }
+
+        .msg-box {
+            font-size: 11px;
+            text-align: center;
+            margin-top: 12px;
+            color: #059669;
+            font-weight: 700;
+            min-height: 18px;
+        }
+
+        /* ======================================================= */
+        /* TAB 3: TERMINAL SCREEN (Uncopyable, Detailed Logs)      */
+        /* ======================================================= */
+        .terminal-container {
+            width: 100%;
+            flex: 1;
+            background: #0B1329;
+            border-radius: 20px;
+            border: 1.5px solid #1E293B;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .terminal-header-bar {
+            background: #111C38;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1E293B;
+        }
+
+        .term-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .term-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+
+        .term-title-text {
+            font-size: 10px;
+            font-weight: 800;
+            color: #38BDF8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .btn-copy-header {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 6px;
+            padding: 3px 8px;
+            color: #38BDF8;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-copy-header:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38BDF8;
+        }
+
+        .btn-copy-term {
+            width: 100%;
+            margin-top: 10px;
+            background: rgba(2, 132, 199, 0.08);
+            border: 1.2px solid rgba(2, 132, 199, 0.3);
+            border-radius: 12px;
+            padding: 10px;
+            color: #0284C7;
+            font-size: 11.5px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .btn-copy-term:hover {
+            background: rgba(2, 132, 199, 0.18);
+            border-color: #0284C7;
+            transform: translateY(-1px);
+        }
+
+        .terminal-body {
+            flex: 1;
+            padding: 14px 16px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10px;
+            line-height: 1.6;
+            color: #38BDF8;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .log-entry {
+            word-break: break-all;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .log-time {
+            color: #64748B;
+        }
+
+        .log-tag {
+            font-weight: bold;
+        }
+
+        .log-tag.boot   { color: #A78BFA; }
+        .log-tag.target { color: #38BDF8; }
+        .log-tag.auth   { color: #34D399; }
+        .log-tag.net    { color: #FBBF24; }
+        .log-tag.err    { color: #F87171; }
+        .log-tag.clean  { color: #00FF7F; }
+
+        .log-info { color: #E2E8F0; }
+        .log-ok   { color: #34D399; }
+        .log-warn { color: #FBBF24; }
+        .log-err  { color: #F87171; }
+
+        /* ======================================================= */
+        /* WHITE GLASSMORPHIC FLOATING BOTTOM NAVIGATION DOCK      */
+        /* ======================================================= */
+        .bottom-nav-container {
+            padding: 0 14px 14px 14px;
+            background: transparent;
+            z-index: 10;
+        }
+
+        .bottom-nav {
+            height: 58px;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1.2px solid rgba(255, 255, 255, 0.95);
+            border-radius: 22px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 4px 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(255, 255, 255, 0.95) inset;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748B;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 5px 18px;
+            border-radius: 16px;
+            user-select: none;
+        }
+
+        .nav-item:hover {
+            color: #0F172A;
+        }
+
+        .nav-item.active {
+            color: #FFFFFF;
+            background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .nav-emoji {
+            font-size: 15px;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .nav-label {
+            font-size: 9.5px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+        }
+
+        /* ======================================================= */
+        /* KEY ACTIVATION POPUP MODAL (AUTO-OPENS ON REFRESH)      */
+        /* ======================================================= */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 999;
+            animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 330px;
+            max-height: 88vh;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1.5px solid rgba(2, 132, 199, 0.25);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35), 0 0 30px rgba(2, 132, 199, 0.15);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .modal-title {
+            font-size: 15px;
+            font-weight: 900;
+            color: #0284C7;
+            letter-spacing: 1px;
+        }
+
+        .modal-close-btn {
+            background: #F1F5F9;
+            border: 1px solid #CBD5E1;
+            color: #EF4444;
+            font-size: 13px;
+            font-weight: 800;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background: #FEE2E2;
+        }
+
+        .modal-desc {
+            font-size: 11px;
+            color: #64748B;
+            margin-bottom: 14px;
+            line-height: 1.4;
+            font-weight: 600;
+        }
+
+        .instructions {
+            margin-top: 22px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid #CBD5E1;
+            border-radius: 16px;
+            padding: 16px 20px;
+            max-width: 520px;
+            font-size: 12px;
+            color: #334155;
+            line-height: 1.6;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .instructions strong {
+            color: #0284C7;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+            margin-top: 6px;
+        }
+
+        /* ======================================================= */
+        /* MOBILE VIEWPORT FULL-SCREEN RESPONSIVENESS (ALL SCREENS) */
+        /* ======================================================= */
+        @media (max-width: 768px) {
+            html, body {
+                width: 100%;
+                height: 100%;
+                height: 100dvh;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+            }
+
+            .header-title,
+            .instructions {
+                display: none !important;
+            }
+
+            .phone-frame {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100% !important;
+                height: 100dvh !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+
+            .phone-status-bar {
+                padding: 0 16px;
+            }
+
+            .app-header {
+                padding: 14px 16px;
+            }
+
+            .tab-slide {
+                padding: 16px 16px 85px 16px;
+            }
+
+            .bottom-nav-container {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 0 12px 14px 12px;
+                padding-bottom: max(14px, env(safe-area-inset-bottom));
+                background: linear-gradient(180deg, transparent 0%, rgba(241, 245, 249, 0.9) 30%, rgba(241, 245, 249, 0.98) 100%);
+            }
+        }
+
+        /* Adaptive scaling for shorter mobile displays */
+        @media (max-height: 700px) {
+            .vpn-power-wrap {
+                width: 135px;
+                height: 135px;
+                margin-bottom: 12px;
+            }
+            .vpn-power-btn {
+                width: 110px;
+                height: 110px;
+            }
+            .connection-state-text {
+                font-size: 16px;
+                margin-bottom: 2px;
+            }
+            .connection-sub-text {
+                font-size: 11px;
+                margin-bottom: 10px;
+            }
+            .key-timer-card {
+                padding: 10px 14px;
+            }
+            .digital-countdown {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-title">
+        <h1>NEXUS TUNNEL</h1>
+        <p>Swipe Gesture (WhatsApp-style) &bull; Clean Key Timer &bull; Key Controls (Add/Deactivate/Delete) &bull; Uncopyable Terminal</p>
+    </div>
+
+    <!-- Phone Frame -->
+    <div class="phone-frame">
+        
+        <!-- Status Bar -->
+        <div class="phone-status-bar">
+            <span>10:45</span>
+            <div class="status-icons">
+                <span>5G</span>
+                <span>98%</span>
+            </div>
+        </div>
+
+        <!-- Top Header (ONLY NEXUS TUNNEL + Status Pill) -->
+        <div class="app-header">
+            <div class="app-brand">NEXUS TUNNEL</div>
+            <div class="status-pill" id="headerStatusPill">
+                <div class="status-dot"></div>
+                <span id="headerStatusText">NOT CONNECTED</span>
+            </div>
+        </div>
+
+        <!-- Touch/Mouse Swipe Slider Viewport (Swipe horizontally like WhatsApp) -->
+        <div class="tab-slider-wrapper" id="sliderWrapper">
+            <div class="tab-slider-container" id="tabSlider">
+                
+                <!-- TAB 1: TUNNEL (VPN Connect + Clean Countdown Timer) -->
+                <div class="tab-slide" id="slideTunnel">
+                    <div class="vpn-center-container">
+                        
+                        <div class="vpn-power-wrap" id="powerWrap">
+                            <div class="ripple-1"></div>
+                            <div class="ripple-2"></div>
+                            <div class="vpn-power-btn" id="vpnBtn" onclick="toggleVPN()">
+                                <svg class="power-svg" viewBox="0 0 24 24">
+                                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                                    <line x1="12" y1="2" x2="12" y2="12"></line>
+                                </svg>
+                                <div class="power-label" id="btnLabel">CONNECT</div>
+                            </div>
+                        </div>
+
+                        <div class="connection-state-text" id="connStateText">TAP TO CONNECT</div>
+                        <div class="connection-sub-text" id="connSubText">Tap the power button to secure connection</div>
+
+                        <!-- Clean VIP Key Expiration Countdown (Formatted in hours in 1 single line) -->
+                        <div class="key-timer-card">
+                            <div class="timer-title">VIP ACCESS VALIDITY</div>
+                            <div class="digital-countdown" id="vipCountdownTimer">714h : 42m : 15s</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- TAB 2: LICENSE (Add Key, Deactivate Key, Delete Key) -->
+                <div class="tab-slide" id="slideLicense">
+                    <div class="tab-heading">
+                        <h2>VIP LICENSE KEY</h2>
+                        <p>Manage tunnel key authorization</p>
+                    </div>
+
+                    <div style="margin-bottom: 6px;">
+                        <div class="key-input-wrapper">
+                            <input type="password" class="cyber-input" id="keyField" value="" placeholder="Enter VIP key...">
+                            <button class="btn-toggle-eye" id="eyeBtn" onclick="toggleKeyVisibility('keyField', 'eyeBtn')" title="Show / Hide Key">👁️</button>
+                        </div>
+                        <button class="btn-paste" onclick="pasteKeyToInput('keyField', 'keyMsg')">📋 PASTE FROM CLIPBOARD</button>
+                    </div>
+
+                    <!-- 3 Clean Action Buttons -->
+                    <button class="btn-action-primary" onclick="activateKey()">ACTIVATE VIP KEY</button>
+                    <button class="btn-action-secondary" onclick="deactivateKey()">DEACTIVATE KEY</button>
+                    <button class="btn-action-danger" onclick="deleteKey()">DELETE KEY</button>
+                    <div class="msg-box" id="keyMsg">VIP key required to authorize connection.</div>
+                </div>
+
+                <!-- TAB 3: TERMINAL (Real-time Live Console with Copy button, zero version exposed) -->
+                <div class="tab-slide" id="slideTerminal">
+                    <div class="tab-heading">
+                        <h2>SYSTEM LOGS</h2>
+                        <p>Operational diagnosis stream</p>
+                    </div>
+
+                    <div class="terminal-container">
+                        <div class="terminal-header-bar">
+                            <div class="term-dots">
+                                <div class="term-dot" style="background: #EF4444;"></div>
+                                <div class="term-dot" style="background: #F59E0B;"></div>
+                                <div class="term-dot" style="background: #10B981;"></div>
+                            </div>
+                            <div class="term-title-text">CONSOLE DAEMON</div>
+                            <button class="btn-copy-header" onclick="copyTerminalLogs()" title="Copy Logs">📋 COPY</button>
+                        </div>
+                        <div class="terminal-body" id="termBody">
+                            <div class="log-entry"><span class="log-time">[10:45:01]</span> <span class="log-tag boot">[BOOT]</span> Core services initialized.</div>
+                            <div class="log-entry"><span class="log-time">[10:45:02]</span> <span class="log-tag target">[ENV]</span> Target game package auto-detected.</div>
+                            <div class="log-entry"><span class="log-time">[10:45:02]</span> <span class="log-tag auth">[AUTH]</span> VIP Access validated.</div>
+                            <div class="log-entry"><span class="log-time">[10:45:03]</span> <span class="log-tag net">[STATE]</span> Ready for tunnel deployment.</div>
+                        </div>
+                    </div>
+
+                    <button class="btn-copy-term" id="btnCopyTerminal" onclick="copyTerminalLogs()">
+                        📋 COPY TERMINAL DATA
+                    </button>
+                    <div class="msg-box" id="termCopyMsg" style="min-height: 18px; margin-top: 6px;"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Interactive Popup Modal (Auto-open on refresh for instant test) -->
+        <div class="modal-overlay" id="vipModal">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <div class="modal-title">VIP KEY REQUIRED</div>
+                    <button class="modal-close-btn" onclick="closeModal()">✕</button>
+                </div>
+                <div class="modal-desc">
+                    Enter your VIP License Key to authorize and start the high-speed secure tunnel.
+                </div>
+                
+                <div style="margin-bottom: 12px;">
+                    <div class="key-input-wrapper">
+                        <input type="password" class="cyber-input" id="modalKeyInput" value="" placeholder="Enter VIP Key...">
+                        <button class="btn-toggle-eye" id="modalEyeBtn" onclick="toggleKeyVisibility('modalKeyInput', 'modalEyeBtn')">👁️</button>
+                    </div>
+                    <button class="btn-paste" onclick="pasteKeyToInput('modalKeyInput', 'modalMsg')">📋 PASTE FROM CLIPBOARD</button>
+                </div>
+
+                <button class="btn-action-primary" style="background: linear-gradient(90deg, #059669, #047857);" onclick="activateFromModal()">ACTIVATE</button>
+                <div class="msg-box" id="modalMsg"></div>
+            </div>
+        </div>
+
+        <!-- White Glassmorphism Bottom Navigation Dock -->
+        <div class="bottom-nav-container">
+            <div class="bottom-nav">
+                <div class="nav-item active" id="navHome" onclick="slideToTab(0, 'navHome')">
+                    <div class="nav-emoji">🛡️</div>
+                    <div class="nav-label">TUNNEL</div>
+                </div>
+                <div class="nav-item" id="navLicense" onclick="slideToTab(1, 'navLicense')">
+                    <div class="nav-emoji">🔑</div>
+                    <div class="nav-label">LICENSE</div>
+                </div>
+                <div class="nav-item" id="navTerminal" onclick="slideToTab(2, 'navTerminal')">
+                    <div class="nav-emoji">💻</div>
+                    <div class="nav-label">TERMINAL</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Instructions for User -->
+    <div class="instructions">
+        <strong>⚡ Live Swipe & Feature Enhancements:</strong>
+        <ul>
+            <li><strong>Touch & Mouse Drag:</strong> Hold and drag left or right across the screen with your mouse or finger — pages smoothly slide like WhatsApp!</li>
+            <li><strong>Clean Timer:</strong> Only the countdown timer is displayed under the connect button without extra badges or clutter.</li>
+            <li><strong>License Actions:</strong> Clean <strong>ACTIVATE KEY</strong>, <strong>DEACTIVATE KEY</strong>, and <strong>DELETE KEY</strong> buttons. Secret key string is never exposed anywhere!</li>
+            <li><strong>Terminal Stream:</strong> Non-copyable real-time logs without the Clear button, making diagnosing errors fast and easy.</li>
+        </ul>
+    </div>
+
+    <script>
+        let isConnected = false;
+        let hasKey = false;
+        let currentTabIndex = 0;
+
+        // Countdown Timer Logic (Strictly in total hours in 1 single line)
+        let totalSecondsRemaining = (29 * 86400) + (18 * 3600) + (42 * 60) + 15;
+        setInterval(() => {
+            if (totalSecondsRemaining > 0) {
+                totalSecondsRemaining--;
+                const totalHours = Math.floor(totalSecondsRemaining / 3600);
+                const m = Math.floor((totalSecondsRemaining % 3600) / 60);
+                const s = Math.floor(totalSecondsRemaining % 60);
+                const pad = (n) => String(n).padStart(2, '0');
+                const timerEl = document.getElementById('vipCountdownTimer');
+                if (timerEl) {
+                    timerEl.innerText = `${totalHours}h : ${pad(m)}m : ${pad(s)}s`;
+                }
+            }
+        }, 1000);
+
+        // Slide to specific tab
+        function slideToTab(index, navId) {
+            currentTabIndex = Math.max(0, Math.min(2, index));
+            const slider = document.getElementById('tabSlider');
+            slider.style.transition = "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)";
+            slider.style.transform = `translateX(-${currentTabIndex * 33.3333}%)`;
+
+            const navIds = ['navHome', 'navLicense', 'navTerminal'];
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById(navIds[currentTabIndex]);
+            if (activeNav) activeNav.classList.add('active');
+        }
+
+        // =======================================================
+        // TOUCH & MOUSE SWIPE WITH INDEPENDENT VERTICAL SCROLL
+        // =======================================================
+        const wrapper = document.getElementById('sliderWrapper');
+        const slider = document.getElementById('tabSlider');
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let isDragging = false;
+        let isHorizontalSwipe = null; // null: pending, true: horizontal swipe, false: vertical scroll
+        let startTranslate = 0;
+
+        function getEventX(e) {
+            return (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+        }
+
+        function getEventY(e) {
+            return (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+        }
+
+        wrapper.addEventListener('mousedown', dragStart);
+        wrapper.addEventListener('touchstart', dragStart, { passive: true });
+
+        window.addEventListener('mousemove', dragMove);
+        window.addEventListener('touchmove', dragMove, { passive: false });
+
+        window.addEventListener('mouseup', dragEnd);
+        window.addEventListener('touchend', dragEnd);
+
+        function dragStart(e) {
+            // Ignore if clicking interactive controls
+            if (e.target.closest('button') ||
+                e.target.closest('input') ||
+                e.target.closest('textarea') ||
+                e.target.closest('.vpn-power-btn') ||
+                e.target.closest('.vpn-power-wrap') ||
+                e.target.closest('.modal-card') ||
+                e.target.closest('.modal-overlay') ||
+                e.target.closest('.bottom-nav') ||
+                e.target.closest('.status-pill') ||
+                e.target.closest('.btn-copy-header') ||
+                e.target.closest('.terminal-body')) {
+                return;
+            }
+            isDragging = true;
+            isHorizontalSwipe = null;
+            startX = getEventX(e);
+            startY = getEventY(e);
+            currentX = startX;
+            slider.style.transition = 'none';
+            startTranslate = -currentTabIndex * (wrapper.offsetWidth);
+        }
+
+        function dragMove(e) {
+            if (!isDragging) return;
+            const x = getEventX(e);
+            const y = getEventY(e);
+            const deltaX = x - startX;
+            const deltaY = y - startY;
+
+            // Determine if gesture is vertical scroll or horizontal swipe
+            if (isHorizontalSwipe === null) {
+                if (Math.abs(deltaX) > 7 || Math.abs(deltaY) > 7) {
+                    if (Math.abs(deltaY) >= Math.abs(deltaX)) {
+                        // User is scrolling vertically inside current screen: release drag lock!
+                        isHorizontalSwipe = false;
+                        isDragging = false;
+                        return;
+                    } else {
+                        // User is swiping horizontally across screens
+                        isHorizontalSwipe = true;
+                    }
+                } else {
+                    return; // In deadzone
+                }
+            }
+
+            if (!isHorizontalSwipe) return;
+
+            // Prevent window rubber-band when swiping horizontally
+            if (e.cancelable) e.preventDefault();
+
+            currentX = x;
+            const newTranslate = startTranslate + deltaX;
+            const minTranslate = -2 * wrapper.offsetWidth;
+
+            // Elastic bounce at edges
+            if (newTranslate > 0) {
+                slider.style.transform = `translateX(${deltaX * 0.3}px)`;
+            } else if (newTranslate < minTranslate) {
+                slider.style.transform = `translateX(${minTranslate + (newTranslate - minTranslate) * 0.3}px)`;
+            } else {
+                slider.style.transform = `translateX(${newTranslate}px)`;
+            }
+        }
+
+        function dragEnd(e) {
+            if (!isDragging || !isHorizontalSwipe) {
+                isDragging = false;
+                isHorizontalSwipe = null;
+                return;
+            }
+            isDragging = false;
+            const deltaX = currentX - startX;
+            const threshold = wrapper.offsetWidth * 0.18; // 18% swipe threshold
+
+            if (deltaX < -threshold && currentTabIndex < 2) {
+                currentTabIndex++;
+            } else if (deltaX > threshold && currentTabIndex > 0) {
+                currentTabIndex--;
+            }
+            isHorizontalSwipe = null;
+            slideToTab(currentTabIndex, ['navHome', 'navLicense', 'navTerminal'][currentTabIndex]);
+        }
+
+        // =======================================================
+        // APP INITIALIZATION & AUTO-POPUP ON REFRESH
+        // =======================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+
+        function initApp() {
+            let savedKey = null;
+            try {
+                savedKey = localStorage.getItem('nexus_vip_key');
+            } catch(e) {}
+
+            if (savedKey && savedKey.trim()) {
+                hasKey = true;
+                const trimmedKey = savedKey.trim();
+                document.getElementById('keyField').value = trimmedKey;
+                document.getElementById('modalKeyInput').value = trimmedKey;
+                const keyMsg = document.getElementById('keyMsg');
+                if (keyMsg) {
+                    keyMsg.innerText = "VIP License verified & active.";
+                    keyMsg.style.color = "#059669";
+                }
+                appendLog("AUTH", "VIP License loaded from secure cache.", "ok");
+            } else {
+                hasKey = false;
+                document.getElementById('keyField').value = "";
+                document.getElementById('modalKeyInput').value = "";
+                const keyMsg = document.getElementById('keyMsg');
+                if (keyMsg) {
+                    keyMsg.innerText = "VIP key required to authorize connection.";
+                    keyMsg.style.color = "#D97706";
+                }
+                // Automatically pop up key dialog on refresh / initial open
+                setTimeout(() => {
+                    openModal();
+                }, 350);
+            }
+        }
+
+        // =======================================================
+        // TERMINAL REAL-TIME LOG STREAM
+        // =======================================================
+        function appendLog(tag, msg, type = 'info') {
+            const body = document.getElementById('termBody');
+            if (!body) return;
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            
+            let tagClass = 'boot';
+            if (tag === 'TARGET') tagClass = 'target';
+            if (tag === 'AUTH') tagClass = 'auth';
+            if (tag === 'NET' || tag === 'CONNECT') tagClass = 'net';
+            if (tag === 'ERR' || tag === 'FAIL') tagClass = 'err';
+            if (tag === 'CLEAN') tagClass = 'clean';
+
+            let msgClass = 'log-info';
+            if (type === 'ok') msgClass = 'log-ok';
+            if (type === 'warn') msgClass = 'log-warn';
+            if (type === 'err') msgClass = 'log-err';
+
+            div.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="log-tag ${tagClass}">[${tag}]</span> <span class="${msgClass}">${msg}</span>`;
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function copyTerminalLogs() {
+            const entries = document.querySelectorAll('#termBody .log-entry');
+            let text = "";
+            entries.forEach(e => {
+                text += e.innerText + "\n";
+            });
+            if (!text.trim()) {
+                text = "[BOOT] System terminal active.\n";
+            }
+            
+            function showFeedback() {
+                const msg = document.getElementById('termCopyMsg');
+                const btn = document.getElementById('btnCopyTerminal');
+                if (msg) {
+                    msg.innerText = "✓ Terminal data successfully copied to clipboard!";
+                    msg.style.color = "#059669";
+                    setTimeout(() => { msg.innerText = ""; }, 2500);
+                }
+                if (btn) {
+                    btn.innerHTML = "✓ COPIED TO CLIPBOARD";
+                    btn.style.color = "#059669";
+                    btn.style.borderColor = "#059669";
+                    setTimeout(() => {
+                        btn.innerHTML = "📋 COPY TERMINAL DATA";
+                        btn.style.color = "#0284C7";
+                        btn.style.borderColor = "rgba(2, 132, 199, 0.3)";
+                    }, 2500);
+                }
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(showFeedback).catch(() => {
+                    fallbackCopy(text);
+                    showFeedback();
+                });
+            } else {
+                fallbackCopy(text);
+                showFeedback();
+            }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch(e) {}
+            document.body.removeChild(ta);
+        }
+
+        function toggleVPN() {
+            const currentKey = document.getElementById('keyField').value.trim();
+            if (!hasKey || !currentKey) {
+                openModal();
+                return;
+            }
+
+            const btn = document.getElementById('vpnBtn');
+            const wrap = document.getElementById('powerWrap');
+            const headerPill = document.getElementById('headerStatusPill');
+            const headerText = document.getElementById('headerStatusText');
+            const btnLabel = document.getElementById('btnLabel');
+            const stateText = document.getElementById('connStateText');
+            const subText = document.getElementById('connSubText');
+
+            if (!isConnected) {
+                stateText.innerText = "CONNECTING...";
+                stateText.style.color = "#0284C7";
+                subText.innerText = "Establishing secure gateway protocol...";
+                btnLabel.innerText = "...";
+                appendLog("CONNECT", "Initiating secure handshake...", "warn");
+                appendLog("PERMISSION", "Storage access verified from device.", "ok");
+                appendLog("DOWNLOAD", "Fetching payload from server...", "warn");
+                
+                setTimeout(() => {
+                    appendLog("IDENTIFY", "Server payload identified: Multi-directory ZIP archive.", "info");
+                    appendLog("TARGET", "Root: /storage/emulated/0/Android/data/com.tencent.ig", "info");
+                    appendLog("UNZIP", "[STEP 1/3] Decompressing archive structure...", "warn");
+                    
+                    setTimeout(() => {
+                        appendLog("DEPLOY", "[STEP 2/3] Extracting files into Saved/Paks hierarchy...", "warn");
+                        
+                        setTimeout(() => {
+                            isConnected = true;
+                            btn.classList.add('connected');
+                            wrap.classList.add('connected');
+                            headerPill.classList.add('connected');
+                            headerText.innerText = "CONNECTED";
+                            btnLabel.innerText = "DISCONNECT";
+                            stateText.innerText = "CONNECTED";
+                            stateText.style.color = "#059669";
+                            subText.innerText = "Secure high-speed tunnel active";
+                            appendLog("SUCCESS", "[STEP 3/3] Deployment complete. 0 errors.", "ok");
+                            appendLog("NET", "Tunnel routing 100% ACTIVE and secured.", "ok");
+                        }, 500);
+                    }, 500);
+                }, 500);
+            } else {
+                stateText.innerText = "DISCONNECTING...";
+                stateText.style.color = "#D97706";
+                subText.innerText = "Purging memory & wiping trace files...";
+                appendLog("DISCONNECT", "Stopping tunnel session...", "warn");
+                
+                setTimeout(() => {
+                    isConnected = false;
+                    btn.classList.remove('connected');
+                    wrap.classList.remove('connected');
+                    headerPill.classList.remove('connected');
+                    headerText.innerText = "NOT CONNECTED";
+                    btnLabel.innerText = "CONNECT";
+                    stateText.innerText = "TAP TO CONNECT";
+                    stateText.style.color = "#1E293B";
+                    subText.innerText = "Tap the power button to secure connection";
+                    appendLog("CLEAN", "All injected files purged. 0 traces remaining.", "clean");
+                }, 600);
+            }
+        }
+
+        function toggleKeyVisibility(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (input.type === "password") {
+                input.type = "text";
+                btn.innerText = "🙈";
+            } else {
+                input.type = "password";
+                btn.innerText = "👁️";
+            }
+        }
+
+        async function pasteKeyToInput(inputId, msgId) {
+            const input = document.getElementById(inputId);
+            const msg = document.getElementById(msgId);
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    if (text && text.trim()) {
+                        input.value = text.trim();
+                        if (msg) {
+                            msg.innerText = "Key pasted from clipboard!";
+                            msg.style.color = "#0284C7";
+                        }
+                        return;
+                    }
+                }
+            } catch (err) {}
+            // Fast 1-tap fallback for instant demo testing
+            input.value = "VIP-PAK-2026";
+            if (msg) {
+                msg.innerText = "VIP Key ready. Tap ACTIVATE.";
+                msg.style.color = "#0284C7";
+            }
+        }
+
+        function activateKey() {
+            const val = document.getElementById('keyField').value.trim();
+            const msg = document.getElementById('keyMsg');
+            if (val) {
+                hasKey = true;
+                try {
+                    localStorage.setItem('nexus_vip_key', val);
+                } catch(e) {}
+                msg.innerText = "VIP License successfully verified & bound!";
+                msg.style.color = "#059669";
+                appendLog("AUTH", "VIP Key authenticated & bound to hardware.", "ok");
+            } else {
+                hasKey = false;
+                msg.innerText = "Please enter a valid VIP key.";
+                msg.style.color = "#EF4444";
+                appendLog("AUTH", "Authentication failed: Key cannot be empty.", "err");
+            }
+        }
+
+        function deactivateKey() {
+            const msg = document.getElementById('keyMsg');
+            if (isConnected) toggleVPN();
+            hasKey = false;
+            try {
+                localStorage.removeItem('nexus_vip_key');
+            } catch(e) {}
+            msg.innerText = "VIP License deactivated.";
+            msg.style.color = "#D97706";
+            appendLog("AUTH", "VIP License deactivated by user.", "warn");
+        }
+
+        function deleteKey() {
+            const msg = document.getElementById('keyMsg');
+            if (isConnected) toggleVPN();
+            document.getElementById('keyField').value = "";
+            document.getElementById('modalKeyInput').value = "";
+            hasKey = false;
+            try {
+                localStorage.removeItem('nexus_vip_key');
+            } catch(e) {}
+            msg.innerText = "License key deleted from memory & cache.";
+            msg.style.color = "#DC2626";
+            appendLog("AUTH", "License key purged from local storage.", "err");
+        }
+
+        function openModal() {
+            const modal = document.getElementById('vipModal');
+            if (!modal) return;
+            const keyFieldVal = document.getElementById('keyField').value.trim();
+            if (keyFieldVal) {
+                document.getElementById('modalKeyInput').value = keyFieldVal;
+            }
+            document.getElementById('modalMsg').innerText = "";
+            modal.style.display = "flex";
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('vipModal');
+            if (modal) modal.style.display = "none";
+        }
+
+        function activateFromModal() {
+            const val = document.getElementById('modalKeyInput').value.trim();
+            const msg = document.getElementById('modalMsg');
+            if (val) {
+                document.getElementById('keyField').value = val;
+                activateKey();
+                closeModal();
+                toggleVPN();
+            } else {
+                msg.innerText = "Please enter a VIP Key.";
+                msg.style.color = "#EF4444";
+            }
+        }
+    </script>
+</body>
+</html>
