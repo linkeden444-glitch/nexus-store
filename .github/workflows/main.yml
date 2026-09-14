@@ -85,7 +85,7 @@ jobs:
           export PIP_NO_INPUT=1
 
           pip install --upgrade pip setuptools wheel
-          pip install "buildozer>=1.5.0" "cython<3.1.0" virtualenv Pillow
+          pip install "buildozer>=1.5.0" "cython<3.1.0" virtualenv Pillow "python-for-android==2024.1.21"
           # Pre-install all python-for-android packaging dependencies
           pip install appdirs "colorama>=0.3.3" jinja2 "sh>=2,<3.0" meson ninja build toml packaging "wheel~=0.43.0"
           buildozer version
@@ -176,6 +176,13 @@ jobs:
           # Enforce pure python dependencies + openssl for secure HTTPS
           sed -i 's/requirements = .*/requirements = python3,kivy==2.3.0,requests,urllib3,certifi,chardet,idna,openssl/' buildozer.spec
 
+          # Enforce stable python-for-android release (v2024.01.21) to pin Python 3.11.5 and prevent broken Python 3.14
+          if grep -q "p4a.branch" buildozer.spec; then
+            sed -i 's/p4a.branch = .*/p4a.branch = v2024.01.21/' buildozer.spec
+          else
+            sed -i '/\[app\]/a p4a.branch = v2024.01.21' buildozer.spec
+          fi
+
           # Enforce android.skip_update = True to prevent downloading broken preview build-tools 37
           if ! grep -q "android.skip_update" buildozer.spec; then
             sed -i '/\[app\]/a android.skip_update = True' buildozer.spec
@@ -203,7 +210,7 @@ jobs:
           fi
 
           echo "Final buildozer.spec parameters:"
-          grep -E "android.archs|title|requirements|android.accept_sdk_license|android.build_tools_version|source.exclude_dirs" buildozer.spec
+          grep -E "android.archs|title|requirements|p4a.branch|android.accept_sdk_license|android.build_tools_version|source.exclude_dirs" buildozer.spec
 
           if [ ! -f "main.py" ] || [ ! -f "buildozer.spec" ]; then
             echo "CRITICAL ERROR: Required build files (main.py or buildozer.spec) missing!"
@@ -311,6 +318,13 @@ jobs:
           ls -la "$BUILDOZER_SDK/platforms"
           echo "NDK location: $NDK_DIR"
           head -n 3 "$NDK_DIR/source.properties" 2>/dev/null || true
+
+          # Pre-clone stable python-for-android release v2024.01.21 (ensures Python 3.11.5 + Kivy 2.3.0)
+          P4A_DIR="$HOME/.buildozer/android/platform/python-for-android"
+          if [ ! -d "$P4A_DIR" ]; then
+            echo "Setting up python-for-android stable release v2024.01.21..."
+            git clone -b v2024.01.21 --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
+          fi
 
           echo "Starting Buildozer compilation (Pure 64-bit arm64-v8a)..."
           buildozer -v android debug || {
