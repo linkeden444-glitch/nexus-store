@@ -8,6 +8,7 @@ source.exclude_dirs = tests, bin, venv, .buildozer, .git, .github, website, Apk,
 source.exclude_exts = spec, pyc, zip, md, yml, yaml, txt, cfg
 version = 3.0.0
 requirements = python3,kivy==2.3.0,requests,urllib3,certifi,chardet,idna,openssl
+p4a.branch = v2024.01.21
 orientation = portrait
 fullscreen = 0
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
