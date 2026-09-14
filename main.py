@@ -5,7 +5,7 @@ APPLICATION  : NEXUS UC STORE
 VERSION      : 1.0.0 (Numeric Version: 300002)
 FRAMEWORK    : Kivy 2.3.0 / Python 3.11
 ARCHITECTURE : Universal Android (arm64-v8a + armeabi-v7a)
-COMPATIBILITY: Android 7.0 (API 24) to Android 15 (API 35)
+COMPATIBILITY: Xiaomi / Redmi / Samsung / All Android 7.0 - 15 Devices
 ====================================================================
 DESIGN HIGHLIGHTS:
   - 100% Crash-Free on Older 32-bit & Newer 64-bit Android Phones
