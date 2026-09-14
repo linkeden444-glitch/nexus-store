@@ -97,7 +97,6 @@ jobs:
           echo "Preparing files for NEXUS UC Store Universal APK compilation..."
 
           # Only copy files from subdirectories IF they are missing in root
-          # NEVER overwrite user's updated root files!
           if [ ! -f "main.py" ]; then
             for dir_name in Apk apk app App; do
               if [ -f "$dir_name/main.py" ]; then
@@ -258,13 +257,13 @@ jobs:
           mkdir -p ~/.android
           touch ~/.android/repositories.cfg
 
-          P4A_DIR="$HOME/.buildozer/android/platform/python-for-android"
-          if [ ! -d "$P4A_DIR" ]; then
-            git clone -b v2024.01.21 --depth 1 https://github.com/kivy/python-for-android.git "$P4A_DIR"
-          fi
-
           echo "Starting Buildozer compilation (Universal arm64-v8a + armeabi-v7a)..."
-          buildozer -v android debug
+          buildozer -v android debug || {
+            echo "::warning::Buildozer first attempt encountered a network timeout or error. Retrying..."
+            tail -n 60 ~/.buildozer/logs/* 2>/dev/null || true
+            tail -n 60 .buildozer/logs/* 2>/dev/null || true
+            buildozer -v android debug
+          }
 
       - name: 10. Verify & Check Universal APK Output
         run: |
