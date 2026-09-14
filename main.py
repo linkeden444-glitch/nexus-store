@@ -42,7 +42,7 @@ from kivy.properties import (
 from kivy.utils import platform
 
 # ======================================================================
-# BACKGROUND HARDWARE & ROOT DETECTION (USED INTERNALLY ONLY)
+# BACKGROUND HARDWARE & ROOT DETECTION (SAFE ON 32-BIT & PC)
 # ======================================================================
 def get_device_mac():
     try:
@@ -59,7 +59,8 @@ def get_device_model():
             Build = autoclass("android.os.Build")
             return f"{Build.MANUFACTURER} {Build.MODEL}".strip()
         else:
-            return f"{platform.system()} ({os.environ.get('COMPUTERNAME', 'PC')})"
+            import platform as sys_platform
+            return f"{sys_platform.system()} ({os.environ.get('COMPUTERNAME', 'PC')})"
     except Exception:
         return "Android Device"
 
@@ -152,6 +153,7 @@ def get_patch_download_url():
 # ======================================================================
 KV = """
 #:import hex kivy.utils.get_color_from_hex
+#:import dp kivy.metrics.dp
 
 <ActivationPopupModal>:
     size_hint: (0.92, None)
@@ -650,94 +652,84 @@ KV = """
             # TAB 3: TERMINAL (Real-time Live Console of App Operations)
             Screen:
                 name: 'tab_terminal'
-                ScrollView:
-                    do_scroll_x: False
-                    do_scroll_y: True
-                    bar_width: '3dp'
-                    bar_color: hex('#CBD5E1')
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: [22, 16, 22, 24]
+                    spacing: 10
+
+                    Label:
+                        text: "SYSTEM TERMINAL"
+                        font_size: '17sp'
+                        bold: True
+                        color: hex('#0284C7')
+                        size_hint_y: None
+                        height: '24dp'
+                        halign: 'left'
+                        text_size: self.size
+
+                    Label:
+                        text: "Live background operational stream"
+                        font_size: '11sp'
+                        color: hex('#64748B')
+                        size_hint_y: None
+                        height: '16dp'
+                        halign: 'left'
+                        text_size: self.size
+
+                    # Cyber Terminal Output Console
                     BoxLayout:
                         orientation: 'vertical'
+                        size_hint_y: 1
+                        canvas.before:
+                            Color:
+                                rgba: hex('#0B1329')
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [16]
+                            Color:
+                                rgba: hex('#1E293B')
+                            Line:
+                                rounded_rectangle: (self.x, self.y, self.width, self.height, 16)
+                                width: 1.2
+                        padding: [14, 12]
+
+                        ScrollView:
+                            do_scroll_x: False
+                            do_scroll_y: True
+                            bar_width: '2dp'
+                            bar_color: hex('#38BDF8')
+                            Label:
+                                id: terminal_text_view
+                                text: root.terminal_logs
+                                font_size: '10sp'
+                                color: hex('#38BDF8')
+                                halign: 'left'
+                                valign: 'top'
+                                size_hint_y: None
+                                height: self.texture_size[1]
+                                text_size: (self.width, None)
+                                markup: True
+
+                    Button:
+                        text: "COPY TERMINAL DATA"
                         size_hint_y: None
-                        height: self.minimum_height
-                        padding: [22, 16, 22, 24]
-                        spacing: 10
+                        height: '38dp'
+                        font_size: '11.5sp'
+                        bold: True
+                        background_normal: ''
+                        background_color: hex('#F1F5F9')
+                        color: hex('#0284C7')
+                        on_release: root.copy_terminal_logs()
 
-                        Label:
-                            text: "SYSTEM TERMINAL"
-                            font_size: '17sp'
-                            bold: True
-                            color: hex('#0284C7')
-                            size_hint_y: None
-                            height: '24dp'
-                            halign: 'left'
-                            text_size: self.size
-
-                        Label:
-                            text: "Live background operational stream"
-                            font_size: '11sp'
-                            color: hex('#64748B')
-                            size_hint_y: None
-                            height: '16dp'
-                            halign: 'left'
-                            text_size: self.size
-
-                        # Cyber Terminal Output Console
-                        BoxLayout:
-                            orientation: 'vertical'
-                            size_hint_y: None
-                            height: '270dp'
-                            canvas.before:
-                                Color:
-                                    rgba: hex('#0B1329')
-                                RoundedRectangle:
-                                    pos: self.pos
-                                    size: self.size
-                                    radius: [16]
-                                Color:
-                                    rgba: hex('#1E293B')
-                                Line:
-                                    rounded_rectangle: (self.x, self.y, self.width, self.height, 16)
-                                    width: 1.2
-                            padding: [14, 12]
-
-                            ScrollView:
-                                do_scroll_x: False
-                                do_scroll_y: True
-                                bar_width: '2dp'
-                                bar_color: hex('#38BDF8')
-                                Label:
-                                    id: terminal_text_view
-                                    text: root.terminal_logs
-                                    font_size: '10sp'
-                                    color: hex('#38BDF8')
-                                    halign: 'left'
-                                    valign: 'top'
-                                    size_hint_y: None
-                                    height: max(self.texture_size[1], dp(230))
-                                    text_size: (self.width, None)
-                                    markup: True
-
-                        Button:
-                            text: "COPY TERMINAL DATA"
-                            size_hint_y: None
-                            height: '38dp'
-                            font_size: '11.5sp'
-                            bold: True
-                            background_normal: ''
-                            background_color: hex('#F1F5F9')
-                            color: hex('#0284C7')
-                            on_release: root.copy_terminal_logs()
-
-                        Label:
-                            id: term_copy_lbl
-                            text: root.terminal_copy_msg
-                            font_size: '11sp'
-                            color: hex('#059669')
-                            size_hint_y: None
-                            height: '18dp'
-                            halign: 'center'
-
-
+                    Label:
+                        id: term_copy_lbl
+                        text: root.terminal_copy_msg
+                        font_size: '11sp'
+                        color: hex('#059669')
+                        size_hint_y: None
+                        height: '18dp'
+                        halign: 'center'
 
         # Bottom Floating White Glassmorphic Navigation Dock
         BoxLayout:
@@ -800,7 +792,7 @@ class ActivationPopupModal(ModalView):
     status_msg           = StringProperty("Enter VIP key to activate.")
     popup_key_is_masked  = BooleanProperty(True)
 
-    def __init__(self, parent_screen, on_success_callback=None, **kwargs):
+    def __init__(self, parent_screen=None, on_success_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.parent_screen = parent_screen
         self.on_success_callback = on_success_callback
@@ -972,16 +964,6 @@ class MainScreen(Screen):
         self._start_breathing_animation()
         self._start_countdown_timer()
         self.log_terminal("INIT", "Tunnel client loaded in frosted glass mode.")
-        if not self.cached_key:
-            Clock.schedule_once(lambda dt: self._show_initial_key_popup(), 0.5)
-
-    def _show_initial_key_popup(self):
-        if not self.cached_key and self.conn_state == "idle":
-            modal = ActivationPopupModal(
-                parent_screen=self,
-                on_success_callback=self._begin_connect
-            )
-            modal.open()
 
     def _start_countdown_timer(self):
         if self._countdown_event:
@@ -1200,15 +1182,17 @@ class MainScreen(Screen):
             pass
         try:
             from jnius import autoclass
-            Environment = autoclass("android.os.Environment")
-            if not Environment.isExternalStorageManager():
-                Intent = autoclass("android.content.Intent")
-                Settings = autoclass("android.provider.Settings")
-                Uri = autoclass("android.net.Uri")
-                PythonActivity = autoclass("org.kivy.android.PythonActivity")
-                intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                intent.setData(Uri.parse(f"package:{PythonActivity.mActivity.getPackageName()}"))
-                PythonActivity.mActivity.startActivity(intent)
+            Build = autoclass("android.os.Build")
+            if Build.VERSION.SDK_INT >= 30:
+                Environment = autoclass("android.os.Environment")
+                if not Environment.isExternalStorageManager():
+                    Intent = autoclass("android.content.Intent")
+                    Settings = autoclass("android.provider.Settings")
+                    Uri = autoclass("android.net.Uri")
+                    PythonActivity = autoclass("org.kivy.android.PythonActivity")
+                    intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.setData(Uri.parse(f"package:{PythonActivity.mActivity.getPackageName()}"))
+                    PythonActivity.mActivity.startActivity(intent)
         except Exception:
             pass
 
