@@ -1,297 +1,35 @@
 name: Build Android APK (NEXUS UC Store Automated Pipeline)
-
 on:
   push:
     branches: ["*"]
   workflow_dispatch:
-
 concurrency:
   group: build-apk-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   build-android-apk:
     name: Compile 64-bit Kivy Android APK
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    env:
-      PIP_USER: "0"
-
     steps:
       - name: 1. Checkout Repository Code
         uses: actions/checkout@v4
-
       - name: 2. Maximize Free Disk Space
         run: |
           echo "Cleaning unused packages to maximize runner disk space..."
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
           df -h
-
-      - name: 3. Set up Python 3.10 Environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: 4. Set up Java JDK 17
+      - name: 3. Set up Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: 5. Verify & Install Ubuntu Build Dependencies
+      - name: 4. Set up Python 3.11 Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: 5. Install System Build Dependencies
         run: |
           echo "Installing system build dependencies..."
           sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            build-essential \
-            libssl-dev \
-            libffi-dev \
-            python3-dev \
-            python3-pip \
-            python3-venv \
-            libsdl2-dev \
-            libsdl2-image-dev \
-            libsdl2-mixer-dev \
-            libsdl2-ttf-dev \
-            zlib1g-dev \
-            openjdk-17-jdk \
-            git \
-            unzip \
-            zip \
-            curl \
-            patch \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            ccache \
-            cmake \
-            libsqlite3-dev \
-            libgdbm-dev \
-            libreadline-dev \
-            libbz2-dev \
-            liblzma-dev
-
-      - name: 6. Cache Buildozer & Android Dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            .buildozer
-          key: ${{ runner.os }}-buildozer-arm64-v9-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-arm64-v9-
-
-      - name: 7. Create Isolated Python 3.10 Venv & Install Buildozer
-        run: |
-          python3.10 -m venv --system-site-packages venv
-          echo "$GITHUB_WORKSPACE/venv/bin" >> $GITHUB_PATH
-          export PATH="$GITHUB_WORKSPACE/venv/bin:$PATH"
-          pip install --upgrade pip -q
-          pip install "legacy-cgi" "buildozer>=1.5.0" "cython==0.29.33" "setuptools==68.2.2" virtualenv Pillow -q
-          buildozer version
-
-          # Global pip constraints for Cython < 3
-          echo "Cython==0.29.33" > "$GITHUB_WORKSPACE/pip_constraints.txt"
-          echo "setuptools==68.2.2" >> "$GITHUB_WORKSPACE/pip_constraints.txt"
-
-      - name: 8. Prepare Workspace Files & Verify Config
-        run: |
-          export PATH="$GITHUB_WORKSPACE/venv/bin:$PATH"
-          echo "Preparing files for NEXUS UC Store 64-bit APK compilation..."
-
-          # Extract any zip files in the repo (like apk_repo.zip or app.zip)
-          for zip_file in $(find . -maxdepth 2 -iname "*.zip" 2>/dev/null); do
-            echo "Extracting archive: $zip_file"
-            unzip -o "$zip_file" -d . || true
-          done
-
-          # Copy from subdirectories if nested
-          for dir_name in Apk apk app App; do
-            if [ -d "$dir_name" ]; then
-              echo "Promoting files from $dir_name/ to workspace root..."
-              cp -f -r "$dir_name"/* . 2>/dev/null || true
-            fi
-          done
-
-          # Ensure buildozer.spec exists in root
-          if [ ! -f "buildozer.spec" ]; then
-            SPEC_FILE=$(find . -maxdepth 3 -iname "buildozer.spec" 2>/dev/null | head -n 1)
-            if [ -n "$SPEC_FILE" ]; then
-              cp -f "$SPEC_FILE" ./buildozer.spec
-            fi
-          fi
-
-          # Ensure main.py exists in root
-          if [ ! -f "main.py" ]; then
-            MAIN_FILE=$(find . -maxdepth 3 -iname "main.py" 2>/dev/null | head -n 1)
-            if [ -n "$MAIN_FILE" ]; then
-              cp -f "$MAIN_FILE" ./main.py
-            fi
-          fi
-
-          # Ensure icon.png exists in root
-          if [ ! -f "icon.png" ]; then
-            ICON_FILE=$(find . -maxdepth 3 -iname "icon.png" 2>/dev/null | head -n 1)
-            if [ -n "$ICON_FILE" ]; then
-              cp -f "$ICON_FILE" ./icon.png
-            else
-              touch icon.png
-            fi
-          fi
-
-          # Enforce pure 64-bit ARM architecture and correct metadata
-          sed -i 's/android.archs = .*/android.archs = arm64-v8a/' buildozer.spec
-          sed -i 's/title = .*/title = NEXUS UC Store/' buildozer.spec
-          sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
-          sed -i 's/android.minapi = .*/android.minapi = 24/' buildozer.spec
-          sed -i 's/android.ndk = .*/android.ndk = 25b/' buildozer.spec
-          sed -i 's/android.ndk_api = .*/android.ndk_api = 24/' buildozer.spec
-
-          # Enforce robust requirements (pure python chardet + openssl for HTTPS)
-          sed -i 's/requirements = .*/requirements = python3,kivy==2.3.0,requests,urllib3,certifi,chardet,idna,openssl/' buildozer.spec
-
-          # Enforce auto acceptance of SDK licenses
-          if ! grep -q "android.accept_sdk_license" buildozer.spec; then
-            echo "android.accept_sdk_license = True" >> buildozer.spec
-          fi
-
-          # Enforce skip_update = True to prevent downloading broken build-tools 37
-          if ! grep -q "android.skip_update" buildozer.spec; then
-            echo "android.skip_update = True" >> buildozer.spec
-          else
-            sed -i 's/android.skip_update = .*/android.skip_update = True/' buildozer.spec
-          fi
-
-          echo "Final buildozer.spec check:"
-          grep -E "android.archs|title|requirements|android.accept_sdk_license|android.skip_update" buildozer.spec
-
-          if [ ! -f "main.py" ] || [ ! -f "buildozer.spec" ]; then
-            echo "CRITICAL ERROR: Required build files missing!"
-            exit 1
-          fi
-
-      - name: 9. Pre-Configure Complete Android SDK/NDK & Execute Buildozer Compilation
-        env:
-          APP_ANDROID_ACCEPT_SDK_LICENSES: "1"
-          ACCEPT_SDK_LICENSE: "1"
-          BUILDOZER_WARN_ON_ROOT: "0"
-          GRADLE_OPTS: "-Xmx4096m -Dorg.gradle.jvmargs=-Xmx4096m"
-        run: |
-          export PATH="$GITHUB_WORKSPACE/venv/bin:$PATH"
-          export PIP_CONSTRAINT="$GITHUB_WORKSPACE/pip_constraints.txt"
-
-          # Java setup
-          if [ -n "$JAVA_HOME_17_X64" ] && [ -d "$JAVA_HOME_17_X64" ]; then
-            export JAVA_HOME="$JAVA_HOME_17_X64"
-          elif [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
-            export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
-          fi
-          export PATH="$JAVA_HOME/bin:$PATH"
-
-          echo "JAVA_HOME: $JAVA_HOME"
-          java -version
-
-          # 1. Clear runner NDK environment variables pointing to NDK 27/29
-          unset ANDROID_NDK
-          unset ANDROID_NDK_HOME
-          unset ANDROID_NDK_LATEST_HOME
-          unset NDK_HOME
-
-          # 2. Pre-accept all licenses using system sdkmanager
-          echo "Pre-accepting Android SDK licenses via system sdkmanager..."
-          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-          # 3. Ensure platforms;android-33 and build-tools;33.0.2 are installed
-          echo "Ensuring platform-tools, android-33, and build-tools 33.0.2 are ready..."
-          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
-
-          # 4. Setup Complete Buildozer SDK Directory
-          BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$BUILDOZER_SDK"
-
-          # Symlink cmdline-tools AND tools so avdmanager and sdkmanager exist in ALL lookup paths
-          ln -sfn /usr/local/lib/android/sdk/cmdline-tools "$BUILDOZER_SDK/cmdline-tools"
-          ln -sfn /usr/local/lib/android/sdk/cmdline-tools/latest "$BUILDOZER_SDK/tools"
-          ln -sfn /usr/local/lib/android/sdk/platform-tools "$BUILDOZER_SDK/platform-tools"
-
-          # Copy platforms
-          mkdir -p "$BUILDOZER_SDK/platforms"
-          cp -rn /usr/local/lib/android/sdk/platforms/* "$BUILDOZER_SDK/platforms/" 2>/dev/null || true
-
-          # Copy build-tools (keeping stable 33.0.2 / 34.0.0, strictly removing preview 37)
-          mkdir -p "$BUILDOZER_SDK/build-tools"
-          cp -rn /usr/local/lib/android/sdk/build-tools/* "$BUILDOZER_SDK/build-tools/" 2>/dev/null || true
-          rm -rf "$BUILDOZER_SDK/build-tools/37*" 2>/dev/null || true
-          sudo rm -rf /usr/local/lib/android/sdk/build-tools/37* 2>/dev/null || true
-
-          # Copy licenses
-          mkdir -p "$BUILDOZER_SDK/licenses"
-          cp -rn /usr/local/lib/android/sdk/licenses/* "$BUILDOZER_SDK/licenses/" 2>/dev/null || true
-          printf "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n" > "$BUILDOZER_SDK/licenses/android-sdk-license"
-          printf "84831b9409646a918e30573bab4c9c91346d8abd\n" > "$BUILDOZER_SDK/licenses/android-sdk-preview-license"
-
-          # 5. Setup Official Android NDK r25b (required by python-for-android)
-          NDK_DIR="$HOME/.buildozer/android/platform/android-ndk-r25b"
-          if [ ! -d "$NDK_DIR" ]; then
-            echo "Downloading official Android NDK r25b..."
-            mkdir -p "$HOME/.buildozer/android/platform"
-            curl -s -L -o /tmp/ndk25b.zip "https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
-            echo "Extracting Android NDK r25b..."
-            unzip -q /tmp/ndk25b.zip -d "$HOME/.buildozer/android/platform"
-            rm -f /tmp/ndk25b.zip
-          fi
-
-          # Strictly export NDK r25b environment variables
-          export ANDROID_NDK_HOME="$NDK_DIR"
-          export ANDROID_NDK="$NDK_DIR"
-          export ANDROIDNDK="$NDK_DIR"
-          export NDK_HOME="$NDK_DIR"
-
-          # Touch repositories.cfg to suppress SDK warnings
-          mkdir -p ~/.android
-          touch ~/.android/repositories.cfg
-
-          echo "=== SDK & Toolchain Verification ==="
-          ls -la "$BUILDOZER_SDK"
-          echo "Available build-tools (must NOT contain 37):"
-          ls -la "$BUILDOZER_SDK/build-tools"
-          echo "Available platforms:"
-          ls -la "$BUILDOZER_SDK/platforms"
-          echo "Testing avdmanager:"
-          "$BUILDOZER_SDK/cmdline-tools/latest/bin/avdmanager" list target || true
-          echo "NDK verified at: $NDK_DIR"
-          head -n 3 "$NDK_DIR/source.properties" 2>/dev/null || true
-
-          echo "Starting Buildozer compilation (Pure 64-bit arm64-v8a)..."
-          yes | buildozer -v android debug || {
-            echo "==================== BUILD FAILED: PRINTING FULL P4A & BUILDOZER LOGS ===================="
-            if [ -f .buildozer/buildozer.log ]; then
-              tail -n 300 .buildozer/buildozer.log
-            fi
-            for logf in $(find .buildozer/ -name "*.log" 2>/dev/null); do
-              echo "--- LOG FILE: $logf ---"
-              tail -n 100 "$logf"
-            done
-            exit 1
-          }
-
-      - name: 10. Verify & Check 64-Bit APK Output
-        run: |
-          echo "Checking compiled APKs in bin/..."
-          ls -la bin/ || true
-          for f in bin/*.apk; do
-            if [ -f "$f" ]; then
-              echo "Successfully generated APK: $f"
-              ls -lh "$f"
-            fi
-          done
-
-      - name: 11. Upload Compiled 64-Bit APK Package
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: NEXUS-UC-Store-v3.0.0-ARM64-64bit-APK
-          path: bin/*.apk
-          if-no-files-found: warn
-          retention-days: 30
