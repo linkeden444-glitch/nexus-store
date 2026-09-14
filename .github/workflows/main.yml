@@ -75,14 +75,26 @@ jobs:
           # Create venv outside workspace to prevent workspace pollution
           python3.11 -m venv /tmp/buildozer_venv
           echo "/tmp/buildozer_venv/bin" >> $GITHUB_PATH
-          export PATH="/tmp/buildozer_venv/bin:$PATH"
+          echo "VIRTUAL_ENV=/tmp/buildozer_venv" >> $GITHUB_ENV
+          echo "PIP_USER=0" >> $GITHUB_ENV
+          echo "PIP_NO_INPUT=1" >> $GITHUB_ENV
+
+          source /tmp/buildozer_venv/bin/activate
+          export VIRTUAL_ENV="/tmp/buildozer_venv"
+          export PIP_USER=0
+          export PIP_NO_INPUT=1
 
           pip install --upgrade pip setuptools wheel
           pip install "buildozer>=1.5.0" "cython<3.1.0" virtualenv Pillow
+          # Pre-install all python-for-android packaging dependencies
+          pip install appdirs "colorama>=0.3.3" jinja2 "sh>=2,<3.0" meson ninja build toml packaging "wheel~=0.43.0"
           buildozer version
 
       - name: 8. Prepare Workspace Files & Verify Config
         run: |
+          source /tmp/buildozer_venv/bin/activate
+          export VIRTUAL_ENV="/tmp/buildozer_venv"
+          export PIP_USER=0
           export PATH="/tmp/buildozer_venv/bin:$PATH"
           echo "Preparing files for NEXUS UC Store 64-bit APK compilation..."
 
@@ -194,8 +206,15 @@ jobs:
           APP_ANDROID_ACCEPT_SDK_LICENSES: "1"
           ACCEPT_SDK_LICENSE: "1"
           BUILDOZER_WARN_ON_ROOT: "0"
+          PIP_USER: "0"
+          PIP_NO_INPUT: "1"
+          VIRTUAL_ENV: "/tmp/buildozer_venv"
           GRADLE_OPTS: "-Xmx4096m -Dorg.gradle.jvmargs=-Xmx4096m"
         run: |
+          source /tmp/buildozer_venv/bin/activate
+          export VIRTUAL_ENV="/tmp/buildozer_venv"
+          export PIP_USER=0
+          export PIP_NO_INPUT=1
           export PATH="/tmp/buildozer_venv/bin:$PATH"
 
           # 1. Take full runner ownership of the pre-installed Android SDK
@@ -205,6 +224,9 @@ jobs:
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
 
           echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "VIRTUAL_ENV: $VIRTUAL_ENV"
+          echo "Python executable: $(which python3)"
+          python3 -c "import os; print('os.environ VIRTUAL_ENV:', os.environ.get('VIRTUAL_ENV'))"
           echo "Java version:"
           java -version
 
@@ -230,8 +252,8 @@ jobs:
             mkdir -p "$HOME/.buildozer/android/platform"
 
             if [ -n "$SYSTEM_NDK_25" ] && [ -d "$SYSTEM_NDK_25" ]; then
-              echo "Using runner pre-installed NDK from $SYSTEM_NDK_25..."
-              ln -sfn "$SYSTEM_NDK_25" "$NDK_DIR"
+              echo "Using runner pre-installed NDK directly from $SYSTEM_NDK_25..."
+              NDK_DIR="$SYSTEM_NDK_25"
             else
               echo "Downloading Android NDK r25b directly..."
               curl -s -L -o /tmp/ndk25b.zip "https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
