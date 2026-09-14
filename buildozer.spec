@@ -22,8 +22,8 @@ icon.filename = %(source.dir)s/icon.png
 presplash.filename = %(source.dir)s/icon.png
 # AUTO ACCEPT SDK LICENSES
 android.accept_sdk_license = True
-# PURE 64-BIT ARM ARCHITECTURE - High-performance modern 64-bit Android devices
-android.archs = arm64-v8a
+# UNIVERSAL ARCHITECTURE - Both 32-bit (armeabi-v7a) and 64-bit (arm64-v8a) devices
+android.archs = arm64-v8a, armeabi-v7a
 android.entrypoint = org.kivy.android.PythonActivity
 android.release_artifact = apk
 
